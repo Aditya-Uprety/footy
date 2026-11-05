@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M6 — Rules engine (M0–M5 done)
-- **Next task:** M6.5 `game/host.ts` HostCore (intent validation, callbacks, guard)
+- **Next task:** M6.6 Rules tests incl. scripted 40-kick match
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M6.4 done)
+- **Last updated:** 2026-11-05 (M6.5 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -66,7 +66,7 @@
 - [x] M6.2 `game/draft.ts` (schedule, validation, forced GK, GK guard)
 - [x] M6.3 `game/restarts.ts` (throw-in, corner, goal kick, throw-in goal exception)
 - [x] M6.4 `game/rules.ts` (match flow, half-time, full-time, rematch)
-- [ ] M6.5 `game/host.ts` HostCore (intent validation, callbacks, guard)
+- [x] M6.5 `game/host.ts` HostCore (intent validation, callbacks, guard)
 - [ ] M6.6 Rules tests incl. scripted 40-kick match
 - [ ] M6.A Acceptance checks passed and reported to the user
 
