@@ -151,6 +151,19 @@ describe('kick() (§2.4)', () => {
     expect(result.start.y).toBe(PHYS.BALL_R);
   });
 
+  it('a ball resting on the goal line in the goal mouth is open play: no goal, no restart (M17.3)', () => {
+    const s0 = draftedMatch(4);
+    const L2 = s0.settings.pitchLength / 2;
+    const s = resolveOutcome(s0, s0.possession!, stopAt(0, L2 + PHYS.BALL_R, 0));
+    expect(s.score).toEqual([0, 0]);
+    expect(s.possession!.restart).toBe('open');
+    expect(s.possession!.kicker.kind).toBe('player');
+    // The closest player gets it (Team B's keeper, if it stands nearest its goal).
+    const kicker = s.players.find((p) => s.possession!.kicker.kind === 'player' && p.id === s.possession!.kicker.playerId)!;
+    const d = (p: { x: number; z: number }) => Math.hypot(p.x - (L2 + PHYS.BALL_R), p.z);
+    expect(Math.min(...s.players.map(d))).toBeCloseTo(d(kicker), 9);
+  });
+
   it('a player kicker kicks from their own spot', () => {
     let s = draftedMatch(6);
     const p = s.players.find((q) => q.team === 1 && !q.gk)!;

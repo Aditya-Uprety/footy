@@ -166,16 +166,21 @@ function physicsStep(run: Run, players: boolean, tail: boolean): Hitbox | null {
     }
   }
 
+  // A ball lying on the net roof (or in the bar/roof corner) is pressed in by
+  // gravity every step: that is a resting contact, not an impact. It still
+  // gets the response but no event and no forced frame (M17.3: one shot over
+  // the bar logged 216 roof "impacts" in its tail).
+  const resting = 3 * c.G * c.DT;
   for (const cap of world.frame) {
     if (!capsuleContact(b, cap, r, n)) continue;
     const impact = respond(b, n, c.E_FRAME, c.MU_FRAME, c.SPIN_KEEP_FRAME);
-    if (impact > 0) pushContact(run, { kind: cap.kind, t: run.t, x: b.p.x, y: b.p.y, z: b.p.z, speed: impact }, tail);
+    if (impact > resting) pushContact(run, { kind: cap.kind, t: run.t, x: b.p.x, y: b.p.y, z: b.p.z, speed: impact }, tail);
   }
 
   for (const net of world.nets) {
     if (!netContact(b, p0, net, r, n)) continue;
     const impact = respondNet(b, n, c);
-    if (impact > 0) pushContact(run, { kind: 'net', t: run.t, x: b.p.x, y: b.p.y, z: b.p.z, speed: impact }, tail);
+    if (impact > resting) pushContact(run, { kind: 'net', t: run.t, x: b.p.x, y: b.p.y, z: b.p.z, speed: impact }, tail);
   }
 
   // A frame or net contact that throws the ball up ends rolling (§5.5).

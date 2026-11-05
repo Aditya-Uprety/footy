@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { derivePitch } from '../shared/pitch';
 import { DEFAULT_SETTINGS } from '../game/settings';
 import { HITBOX, PHYS } from './constants';
+import { createRng } from '../shared/rng';
 import { kickoffSpot } from './kick';
 import { detectLines, simulateKick } from './simulate';
 import { FRAME_STRIDE, type KickOrigin, type KickResult, type SimEvent, type Team } from './types';
@@ -205,6 +206,41 @@ describe('goals, outs and tails (§5.8)', () => {
     expect(detectLines(lines, { x: 0, y: r, z: 0 }, { x: 1, y: r, z: 1 }, r)).toBeNull();
   });
 
+  it('a ball resting ON a line is still in play: only a centre past L/2 + r (whole ball over) is out (M17.3)', () => {
+    const lines = buildWorld(pitch, []).lines;
+    const gx = L2 + r;
+    const tz = W2 + r;
+    // Ending exactly on the plane (the ball just touches the line's outer edge) is not a crossing.
+    expect(detectLines(lines, { x: gx - 0.2, y: r, z: 10 }, { x: gx, y: r, z: 10 }, r)).toBeNull();
+    expect(detectLines(lines, { x: 0, y: r, z: tz - 0.2 }, { x: 0, y: r, z: tz }, r)).toBeNull();
+    expect(detectLines(lines, { x: 0, y: r, z: -tz + 0.2 }, { x: 0, y: r, z: -tz }, r)).toBeNull();
+    // A step that starts on the plane and leaves it is a crossing (f = 0), at the exit on the line.
+    expect(detectLines(lines, { x: gx, y: r, z: 10 }, { x: gx + 0.01, y: r, z: 10 }, r)).toMatchObject({ kind: 'out', line: 'goal', x: L2, f: 0 });
+    expect(detectLines(lines, { x: 0, y: r, z: tz }, { x: 0, y: r, z: tz + 0.01 }, r)).toMatchObject({ kind: 'out', line: 'touch', z: W2, f: 0 });
+  });
+
+  it('a roll that dies on the touchline stops in play; a touch harder goes out (M17.3)', () => {
+    const roll = (power: number) => shoot({ origin: ghost(0, r, 20), yaw: Math.PI / 2, power });
+    // Bisect the power at which the roll just reaches the out plane.
+    let lo = 0;
+    let hi = 1;
+    expect(roll(lo).outcome.kind).toBe('stop');
+    expect(roll(hi).outcome.kind).toBe('out');
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2;
+      if (roll(mid).outcome.kind === 'stop') lo = mid;
+      else hi = mid;
+    }
+    const inPlay = roll(lo).outcome;
+    expect(inPlay.kind).toBe('stop');
+    if (inPlay.kind === 'stop') {
+      // On the line: past the inner edge of the 0.12 m line, not wholly over it.
+      expect(inPlay.z).toBeGreaterThan(W2 - 0.2);
+      expect(inPlay.z).toBeLessThanOrEqual(W2 + r);
+    }
+    expect(roll(hi).outcome).toMatchObject({ kind: 'out', line: 'touch', z: W2 });
+  });
+
   it('T_MAX ends a populated-world kick as a stop with the last touch so far', () => {
     const world = buildWorld(pitch, [pl(5, 1, 3, 0)]);
     const res = simulateKick({
@@ -216,6 +252,67 @@ describe('goals, outs and tails (§5.8)', () => {
     });
     expect(res.duration).toBeCloseTo(0.5, 9);
     expect(res.outcome).toMatchObject({ kind: 'stop', lastTouch: { team: 1, playerId: 5 }, touches: 1 });
+  });
+});
+
+describe('multiple and resting contacts (M17.3)', () => {
+  it('a ball lying on the net roof is a resting contact: no event or forced frame every step', () => {
+    // Dropped onto the roof of B's goal, rolling slowly across it towards the side.
+    const world = buildWorld(pitch, []);
+    const res = simulateKick({
+      input: { yaw: Math.PI / 2, power: 0, curve: 0, loft: 0 },
+      origin: ghost(L2 + 1, 2.5 + r + 0.3, 0),
+      team: 0,
+      world,
+      consts: { ...PHYS, T_MAX: 1.5 },
+    });
+    const onRoof = ofKind(res, 'net').filter((e) => e.y > 2.5);
+    expect(onRoof.length).toBeGreaterThan(0); // it did land on the roof
+    expect(onRoof.length).toBeLessThan(10); // ~360 steps lying there before the fix
+    expect(onRoof.every((e) => e.speed > 3 * PHYS.G * PHYS.DT)).toBe(true);
+    // Frames stay near the normal stride (a resting contact no longer forces one per step).
+    expect(res.frames.length / FRAME_STRIDE).toBeLessThan((1.5 / PHYS.DT / PHYS.FRAME_EVERY) * 1.5);
+  });
+
+  it('crowded goal mouths (keeper by the post, defender at the post): finite, ordered, consistent', () => {
+    const rng = createRng(17);
+    let catches = 0;
+    let frameHits = 0;
+    for (let k = 0; k < 400; k++) {
+      const side = rng.next() < 0.5 ? -1 : 1;
+      const players = [
+        pl(1, 1, L2 - 1 - rng.next() * 2, (rng.next() * 2 - 1) * 4, rng.next() < 0.8),
+        pl(2, 1, L2 - 1, side * (3.66 + 0.4 + rng.next() * 1.5)),
+        pl(3, 0, L2 - 4 - rng.next() * 6, (rng.next() * 2 - 1) * 8),
+      ];
+      const ox = 15 + rng.next() * 30;
+      const oz = (rng.next() * 2 - 1) * 15;
+      const tz = side * (3.4 + rng.next() * 0.7);
+      const res = shoot({
+        origin: ghost(ox, r, oz),
+        yaw: Math.atan2(tz - oz, L2 - ox) + (rng.next() - 0.5) * 0.02,
+        power: 0.3 + rng.next() * 0.7,
+        curve: (rng.next() * 2 - 1) * 0.3,
+        loftDeg: rng.next() * 20,
+        players,
+      });
+      expect(res.frames.every(Number.isFinite)).toBe(true);
+      for (let i = 1; i < res.events.length; i++) expect(res.events[i]!.t).toBeGreaterThanOrEqual(res.events[i - 1]!.t);
+      const live = res.events.filter((e) => !('tail' in e && e.tail));
+      // Every live player contact is counted once (a catch outcome has no touch count).
+      if (res.outcome.kind !== 'catch') expect(res.outcome.touches).toBe(ofKind(res, 'player').filter((e) => !e.tail).length);
+      if (res.outcome.kind === 'catch') catches++;
+      if (live.some((e) => e.kind === 'post' || e.kind === 'bar')) frameHits++;
+      if (res.outcome.kind === 'stop') {
+        for (const p of players) {
+          const R = (p.gk ? HITBOX.GK.R : HITBOX.OUTFIELD.R) + r;
+          expect(Math.hypot(res.outcome.x - p.x, res.outcome.z - p.z)).toBeGreaterThan(R - 1e-6);
+        }
+      }
+    }
+    // The batch really exercises the crowded cases.
+    expect(catches).toBeGreaterThan(30);
+    expect(frameHits).toBeGreaterThan(20);
   });
 });
 
