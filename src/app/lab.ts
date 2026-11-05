@@ -86,7 +86,7 @@ export function createLabView(stage: Stage, pitch: Pitch, opts: LabOptions): Lab
   const pcam = createPlaybackCamera(camera, pitch, 'chase');
   inspect.goTo('tv', true);
 
-  const players = createPlayersView({ hitboxes: true });
+  const players = createPlayersView({ hitboxes: true, stage });
   stage.scene.add(players.group);
 
   // ---- state -------------------------------------------------------------

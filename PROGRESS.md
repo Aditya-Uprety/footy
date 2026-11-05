@@ -5,10 +5,10 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M12 — Visual polish: players, ball, stadium (M0–M11 done)
-- **Next task:** M12.1 Low-poly humanoid players, kits, numbers, GK pose
+- **Current milestone:** M12 — Visual polish: players, ball, stadium (M0–M11 done; M12.1 done)
+- **Next task:** M12.2 Kick animation, catch pose, possessor ring
 - **Model for next task:** Sonnet 5.5 · High effort
-- **Last updated:** 2026-11-05 (M11 done; live at https://aditya-uprety.github.io/footy/; two-device check on the user's Wi-Fi from M10 still to do by the user)
+- **Last updated:** 2026-11-05 (M12.1 done; M11 done; live at https://aditya-uprety.github.io/footy/; two-device check on the user's Wi-Fi from M10 still to do by the user)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -110,7 +110,7 @@
 - [x] M11.A Acceptance checks passed (public URL, cross-network) and reported to the user
 
 ## M12 — Visual polish: players, ball, stadium · Sonnet 5.5 High
-- [ ] M12.1 Low-poly humanoid players, kits, numbers, GK pose
+- [x] M12.1 Low-poly humanoid players, kits, numbers, GK pose
 - [ ] M12.2 Kick animation, catch pose, possessor ring
 - [ ] M12.3 Stadium, crowd, ad boards, floodlights
 - [ ] M12.4 Grass/ball detail + performance budget
@@ -173,3 +173,4 @@
 - 2026-11-05 — M11.1: `base: './'` was already set in M0; verified. `npm run build` → `dist/index.html` references `./assets/…` only (JS 774 kB / 211 kB gzip, PeerJS chunk 87 kB, lil-gui chunk 31 kB, sourcemaps on). `vite preview` on 4173 serves the menu and the lazy chunks (200). Headless Chrome (`webgl-shot`) on `http://localhost:4173/?autoplace&seed=3#/hotseat`: draft skipped, kickoff played, HUD moved to "Kick 2/40", no console errors. `window.__match` exists in the production build too (harmless). `npm run check` 341 tests green.
 - 2026-11-05 — M11.2/M11.3: repo https://github.com/Aditya-Uprety/footy (public, created with `gh` after the user said yes; `origin/main`). Pages source = GitHub Actions (enabled via the API). `.github/workflows/deploy.yml`: push to main / manual → `npm ci` → `npm run check` → `npm run build` (VITE_TURN_* / VITE_PEER_* come from repository variables; empty = unset) → upload-pages-artifact → deploy-pages. First run green. Live site: https://aditya-uprety.github.io/footy/ returns 200 over HTTPS; headless Chrome played a hot-seat kickoff there with no console errors. README rewritten (how to play, online play, troubleshooting, TURN/PeerServer env vars, deploy). Known: GitHub warns that Node 20-based actions (checkout, setup-node, configure-pages, upload-pages-artifact) are forced to Node 24; harmless for now, bump action majors when newer ones exist. Host-page refresh still ends an online match (optional recovery not built).
 - 2026-11-05 — M11.A: live site https://aditya-uprety.github.io/footy/ (HTTP 200, HTTPS) re-deployed after the README/workflow push (bundle `index-DYPQ_63J.js`). Two headless Chrome pages on the live site over the real PeerJS cloud server: host showed code XFF29, guest opened `#/join/XFF29` and both lobbies showed "Connected · RTT 2–3 ms" with the other's name; no console errors. A hot-seat kickoff also played on the live site. **Left to the user:** host on one network and join from another (e.g. phone hotspot) and play a few kicks; the two-device Wi-Fi check from M10.A is still open too.
+- 2026-11-05 — M12.1: `render/players.ts` figures are now low-poly humanoids (boots, socks, bare knees, shorts, shirt capsule, neck, head, ears, hair caps; outfield sleeves stop at the elbow, keepers have long sleeves, dark shorts/socks and white gloves, arms spread). `lookFor(id)` gives a deterministic skin tone / hair colour / style per player id (same on both devices); `buildFigureGeometry(gk, kitHex, look?)` is still one merged vertex-coloured mesh (≈1.8 m outfield) and a test keeps every look inside its hitbox. Shirt number on the back = a small alpha-tested plane parented to the figure; the floating number sprite stays. Idle sway = `swayPose(t, phase)` (≈1° lean + faint breathing stretch about the feet), driven by a new optional `stage` option on `createPlayersView` (matchView, practice, placement and lab pass it). Verified with webgl-shot in the Lab (`?debug#/lab`, `__footy.stage.camera` close-ups), hot-seat and practice: no console errors. **M12.4 watch:** each player is now 3 draw calls (figure + back number + sprite): the Lab shows 86 with 6 players; 22 players ≈ 150+, so merge or instance (e.g. bake numbers into one mesh / instance the back plane) in M12.4. M12.2 needs per-limb animation: the figure is one merged mesh, so split off arms and legs (or use a skinned or per-part rig) there.

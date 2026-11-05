@@ -61,7 +61,7 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
   const pitch = derivePitch(session.state.settings);
   const world: InspectView | null = stage ? createInspectView(stage, pitch, { debug: opts.debug, overlay }) : null;
   // Confirmed players, for every phase after the toss.
-  const players: PlayersView | null = stage ? createPlayersView({ hitboxes: opts.debug }) : null;
+  const players: PlayersView | null = stage ? createPlayersView({ hitboxes: opts.debug, stage }) : null;
   if (stage && players) stage.scene.add(players.group);
   let shownRev = -1;
   let shownPlayers: GameState['players'] | null = null;

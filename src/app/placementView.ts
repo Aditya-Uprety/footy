@@ -89,7 +89,7 @@ export function createPlacementView(opts: PlacementViewOptions): PlacementView {
   // ---- scene pieces ----------------------------------------------------------
   const overlay = createPlacementOverlay(pitch, settings);
   stage.scene.add(overlay.group);
-  const tentView: PlayersView = createPlayersView({ hitboxes: opts.debug });
+  const tentView: PlayersView = createPlayersView({ hitboxes: opts.debug, stage });
   stage.scene.add(tentView.group);
 
   const panel = createPlacementPanel();

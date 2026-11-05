@@ -46,7 +46,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
   const world = createInspectView(stage, pitch, { debug: opts.debug, overlay: opts.overlay });
   world.suspend();
 
-  const playersView: PlayersView = createPlayersView({ hitboxes: opts.debug });
+  const playersView: PlayersView = createPlayersView({ hitboxes: opts.debug, stage });
   stage.scene.add(playersView.group);
 
   const aim = createAimController(stage, { ball: world.ball });
