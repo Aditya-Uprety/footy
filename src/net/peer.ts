@@ -86,7 +86,7 @@ export function iceServers(env: PeerEnv): RTCIceServer[] {
 
 /** PeerJS options: ICE servers, and a self-hosted PeerServer if VITE_PEER_HOST is set. */
 export function peerOptions(env: PeerEnv): Partial<PeerOptions> {
-  const opts: Partial<PeerOptions> = { config: { iceServers: iceServers(env) }, debug: 1 };
+  const opts: Partial<PeerOptions> = { config: { iceServers: iceServers(env) }, debug: 0 }; // errors reach the UI through our own mapping; PeerJS would also log expected ones (room not found while retrying)
   if (env.VITE_PEER_HOST) {
     opts.host = env.VITE_PEER_HOST;
     const port = Number(env.VITE_PEER_PORT);
