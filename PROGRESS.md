@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M4 — Playback renderer and Physics Lab (M0–M3 done)
-- **Next task:** M4.4 chase + broadcast cameras (C toggles)
+- **Next task:** M4.5 Physics Lab `#/lab` (dummies, kick inputs, event log, lil-gui constants)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M4.3 done)
+- **Last updated:** 2026-11-05 (M4.4 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -49,7 +49,7 @@
 - [x] M4.1 Ball mesh, rotation, shadow
 - [x] M4.2 Placeholder players + `?debug` hitboxes
 - [x] M4.3 Playback (interpolation, events, time-warp)
-- [ ] M4.4 Chase + broadcast cameras (C toggles)
+- [x] M4.4 Chase + broadcast cameras (C toggles)
 - [ ] M4.5 Physics Lab `#/lab` (dummies, kick inputs, event log, lil-gui constants)
 - [ ] M4.A Acceptance checks passed (browser pane) and reported to the user
 
