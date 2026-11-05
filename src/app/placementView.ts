@@ -12,7 +12,10 @@
 // removes; Confirm sends the pick. Tentative spots exist only on this device
 // until Confirm (the opponent sees them after).
 import * as THREE from 'three';
-import { PICK_COUNT, PLAYERS_PER_TEAM, pickInfo } from '../game/draft';
+import { PICK_COUNT, PLAYERS_PER_TEAM, pickInfo, randomPick } from '../game/draft';
+import { createRng } from '../shared/rng';
+import { SHOT_TIMER_WARN } from './shotTimer';
+import { timerText } from './matchText';
 import { activeSeat } from '../game/rules';
 import type { GameState, Seat, Team } from '../game/types';
 import { placementPose } from '../render/cameras';
@@ -244,8 +247,40 @@ export function createPlacementView(opts: PlacementViewOptions): PlacementView {
       model = info && seat !== null && session.localSeats.includes(seat) ? createPlacementModel(s, info.team) : null;
       overlay.setTeam(info ? info.team : null);
       controls.enabled = true;
+      pickStart = performance.now();
+      timedOut = false;
     }
     refresh();
+  }
+
+  // ---- placement timer (§2.3.5, §8.4; M10.4) ----------------------------------------
+  // Runs on every device (the opponent sees the countdown too); the placing
+  // device fills the rest of the pick at 0. The host guard backs it up 15 s later.
+  const timerSec = settings.placementTimerSec;
+  const rng = createRng((Math.random() * 0x7fffffff) | 0);
+  let pickStart = performance.now();
+  let timedOut = false;
+  function updateTimer(): void {
+    if (timerSec <= 0 || state.phase !== 'placement') {
+      panel.setTimer(null);
+      return;
+    }
+    const left = Math.max(0, timerSec - (performance.now() - pickStart) / 1000);
+    panel.setTimer({ text: timerText(left), warn: left <= SHOT_TIMER_WARN });
+    if (left > 0 || timedOut || !model || seat === null) return;
+    timedOut = true;
+    drag = null;
+    controls.enabled = true;
+    let spots;
+    try {
+      // Keep what is placed (if still legal together), fill the rest at random.
+      spots = randomPick(state, team, rng, model.spots);
+    } catch {
+      const intent = session.randomPick(seat);
+      if (intent) session.send(seat, intent);
+      return;
+    }
+    session.send(seat, { type: 'place', pick: state.pick, spots });
   }
 
   // ---- actions -------------------------------------------------------------------
@@ -421,6 +456,7 @@ export function createPlacementView(opts: PlacementViewOptions): PlacementView {
     }
     // The ground under a still cursor changes while the camera moves.
     if (pointer.inside && !press) refreshHover();
+    updateTimer();
   });
 
   sync(state);

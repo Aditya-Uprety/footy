@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeRoomCode, parseFlags, parseRoute, routeToHash } from './router';
+import { flagSettings, normalizeRoomCode, parseFlags, parseRoute, routeToHash } from './router';
 
 describe('parseRoute', () => {
   it('maps every PLAN §3.3 route', () => {
@@ -33,12 +33,14 @@ describe('parseRoute', () => {
 
 describe('parseFlags', () => {
   it('defaults to all off', () => {
-    expect(parseFlags('')).toEqual({ debug: false, seed: null, autoplace: false });
+    expect(parseFlags('')).toEqual({ debug: false, seed: null, autoplace: false, shot: null, place: null });
   });
 
   it('reads flags before or after the hash', () => {
-    expect(parseFlags('?debug&seed=42&autoplace')).toEqual({ debug: true, seed: 42, autoplace: true });
-    expect(parseFlags('', '#/lab?debug&seed=7')).toEqual({ debug: true, seed: 7, autoplace: false });
+    expect(parseFlags('?debug&seed=42&autoplace')).toEqual({ debug: true, seed: 42, autoplace: true, shot: null, place: null });
+    expect(parseFlags('?shot=0&place=25')).toMatchObject({ shot: 0, place: 25 });
+    expect(flagSettings(parseFlags('?shot=12&place=x'))).toEqual({ shotTimerSec: 12 });
+    expect(parseFlags('', '#/lab?debug&seed=7')).toEqual({ debug: true, seed: 7, autoplace: false, shot: null, place: null });
   });
 
   it('treats debug=0 / false as off and ignores a non-numeric seed', () => {

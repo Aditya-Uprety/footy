@@ -6,7 +6,7 @@
 // Disconnects show the connection overlay. Once both are in, the host's
 // Start creates a HostSession (M10.1) and the guest's first snapshot creates
 // a GuestSession view (M10.2); both then run the shared match view.
-import { defaultSettings, DEFAULT_SETTINGS } from '../game/settings';
+import { DEFAULT_SETTINGS, sanitizeSettings, type Settings } from '../game/settings';
 import { defaultName, sanitizeName } from '../game/rules';
 import { GuestSession } from '../net/guestSession';
 import { HostSession } from '../net/hostSession';
@@ -35,6 +35,8 @@ export interface OnlineOptions {
   seed?: number | null;
   /** ?autoplace: random picks for this device's seat (test route). */
   autoplace?: boolean;
+  /** Setting overrides for the host's match (query flags until the M13 settings panel). */
+  settings?: Partial<Settings>;
   overlay: HTMLElement;
 }
 
@@ -230,7 +232,7 @@ function hostMode(ctx: MatchCtx): OnlineMode {
     overlay.hide();
     ctx.releaseBackdrop();
     const seed = opts.seed ?? Math.floor(Math.random() * 0x7fffffff);
-    session = new HostSession({ link, settings: defaultSettings(), names: [myName(), guest.name], seed });
+    session = new HostSession({ link, settings: sanitizeSettings(opts.settings ?? {}), names: [myName(), guest.name], seed });
     match = createMatchView({ stage: ctx.stage, session, overlay: opts.overlay, debug: opts.debug, autoplace: opts.autoplace ?? false });
   }
 

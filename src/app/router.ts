@@ -18,6 +18,10 @@ export interface Flags {
   seed: number | null;
   /** ?autoplace: auto-fill a legal draft. */
   autoplace: boolean;
+  /** ?shot=N: shot timer seconds (0 = off) until the lobby settings exist (M13). */
+  shot: number | null;
+  /** ?place=N: placement timer seconds (0 = off). */
+  place: number | null;
 }
 
 /** Room-code alphabet (PLAN §8.1): no I, O, 0, 1. */
@@ -88,6 +92,21 @@ export function parseFlags(search: string, hash = ''): Flags {
     debug: params.has('debug') && truthy(params.get('debug')),
     seed: Number.isFinite(seedNum) ? Math.trunc(seedNum) >>> 0 : null,
     autoplace: params.has('autoplace') && truthy(params.get('autoplace')),
+    shot: num(params.get('shot')),
+    place: num(params.get('place')),
+  };
+}
+
+function num(raw: string | null): number | null {
+  const n = raw === null || raw === '' ? NaN : Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Match-setting overrides from the query flags (sanitized later by `sanitizeSettings`). */
+export function flagSettings(f: Pick<Flags, 'shot' | 'place'>): { shotTimerSec?: number; placementTimerSec?: number } {
+  return {
+    ...(f.shot !== null ? { shotTimerSec: f.shot } : {}),
+    ...(f.place !== null ? { placementTimerSec: f.place } : {}),
   };
 }
 

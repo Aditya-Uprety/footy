@@ -1,7 +1,7 @@
 // Hot-seat mode (#/hotseat, PLAN §3.3): name entry → toss → draft → match,
 // all on one device. A LocalSession runs the HostCore in the page; the match
 // view follows its phases.
-import { defaultSettings, DEFAULT_SETTINGS } from '../game/settings';
+import { DEFAULT_SETTINGS, sanitizeSettings, type Settings } from '../game/settings';
 import type { Stage } from '../render/scene';
 import { derivePitch } from '../shared/pitch';
 import { hotseatSetupScreen } from '../ui/menu';
@@ -13,6 +13,8 @@ export interface HotseatOptions {
   debug: boolean;
   seed: number | null;
   autoplace: boolean;
+  /** Setting overrides (query flags until the M13 settings panel). */
+  settings?: Partial<Settings>;
   /** Parent for the mode's DOM overlays. */
   overlay: HTMLElement;
 }
@@ -44,7 +46,7 @@ export function createHotseatMode(stage: Stage | null, opts: HotseatOptions): Ho
     backdrop?.dispose();
     backdrop = null;
     const seed = opts.seed ?? Math.floor(Math.random() * 0x7fffffff);
-    session = new LocalSession({ settings: defaultSettings(), names, seed });
+    session = new LocalSession({ settings: sanitizeSettings(opts.settings ?? {}), names, seed });
     match = createMatchView({
       stage,
       session,

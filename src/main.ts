@@ -5,7 +5,7 @@ import { createInspectView, type InspectView } from './app/inspect';
 import { createLabView } from './app/lab';
 import { createOnlineMode } from './app/online';
 import { createPracticeView } from './app/practice';
-import { getFlags, routeToHash, startRouter, type Route } from './app/router';
+import { flagSettings, getFlags, routeToHash, startRouter, type Route } from './app/router';
 import { DEFAULT_SETTINGS } from './game/settings';
 import { createFpsCounter } from './render/debug';
 import { createStage, type Stage } from './render/scene';
@@ -60,7 +60,13 @@ function ensureMode(kind: ModeKind, route: Route): void {
   mode = null;
   if (kind === 'hotseat') {
     // Works without WebGL up to the draft (setup and toss are DOM only).
-    const m = createHotseatMode(stage, { debug: flags.debug, seed: flags.seed, autoplace: flags.autoplace, overlay: screenEl });
+    const m = createHotseatMode(stage, {
+      debug: flags.debug,
+      seed: flags.seed,
+      autoplace: flags.autoplace,
+      settings: flagSettings(flags),
+      overlay: screenEl,
+    });
     mode = { kind, key, inspect: null, dispose: () => m.dispose() };
     return;
   }
@@ -72,6 +78,7 @@ function ensureMode(kind: ModeKind, route: Route): void {
       debug: flags.debug,
       seed: flags.seed,
       autoplace: flags.autoplace,
+      settings: flagSettings(flags),
       overlay: screenEl,
     });
     mode = { kind, key, inspect: null, dispose: () => m.dispose() };

@@ -170,4 +170,29 @@ describe('HostSession + GuestSession over LoopbackTransport', () => {
     expect(g2.ready).toBe(true);
     expect(g2.state).toEqual(x.host.state);
   });
+
+  it('placement guard: a silent seat gets a random legal pick after placementTimer + 15 s, on both screens', async () => {
+    let now = 0;
+    const x = await setup({ now: () => now, settings: { placementTimerSec: 20 } });
+    const w = x.host.state.toss.winner;
+    of(x, w).send(w, { type: 'tossChoice', role: 'A' });
+    await step();
+    expect(x.host.state.phase).toBe('placement');
+    const pick = x.host.state.pick;
+    now = 20_000 + 15_000 - 1;
+    expect(x.host.core.tick(now)).toBe(false);
+    now += 1;
+    expect(x.host.core.tick(now)).toBe(true);
+    await step();
+    expect(x.host.state.pick).toBe(pick + 1);
+    expect(x.guest.state).toEqual(x.host.state);
+  });
+
+  it('shot timer off ⇒ no guard', async () => {
+    let now = 0;
+    const x = await setup({ now: () => now, settings: { shotTimerSec: 0 } });
+    await draft(x);
+    now = 10 * 60_000;
+    expect(x.host.core.tick(now)).toBe(false);
+  });
 });

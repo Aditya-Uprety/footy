@@ -545,6 +545,8 @@ html, body {
   animation: toast-in 0.25s ease-out;
 }
 .pick-banner strong { font-size: 19px; }
+.pp-timer { margin-left: 10px; padding: 1px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.12); font-variant-numeric: tabular-nums; font-weight: 700; }
+.pp-timer.warn { background: #c62828; color: #fff; }
 .pick-banner small { flex-basis: 100%; text-align: center; color: var(--fg-dim); font-size: 12.5px; }
 .pick-banner.team-0, .pp-who.team-0 { border-left-color: #d8352f; }
 .pick-banner.team-1, .pp-who.team-1 { border-left-color: #2c63d6; }

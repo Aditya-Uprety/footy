@@ -38,6 +38,8 @@ export interface PlacementPanel {
   tip(at: { x: number; y: number; text: string; ok: boolean } | null): void;
   /** A short message under the buttons (e.g. a refused pick). */
   flash(text: string): void;
+  /** The placement timer in the banner (null hides it); warn = last seconds. */
+  setTimer(t: { text: string; warn: boolean } | null): void;
   onGk(cb: () => void): void;
   onUndo(cb: () => void): void;
   onConfirm(cb: () => void): void;
@@ -46,6 +48,7 @@ export interface PlacementPanel {
 
 export function createPlacementPanel(): PlacementPanel {
   const banner = h('div', { class: 'pick-banner', 'data-screen': 'placement' });
+  const timerEl = h('span', { class: 'pp-timer', hidden: true, 'aria-label': 'Time left for this pick' });
   const who = h('div', { class: 'pp-who' });
   const progress = h('div', { class: 'pp-progress' });
   const gkBtn = h('button', { type: 'button', class: 'btn pp-gk', title: 'Goalkeeper (G)' });
@@ -105,6 +108,7 @@ export function createPlacementPanel(): PlacementPanel {
       banner.append(
         h('strong', {}, `${kit} — place ${n}`),
         h('span', {}, ` · pick ${i.pick + 1}/${i.picks}`),
+        timerEl,
         h('small', {}, i.waiting ?? `${i.seatName}’s turn`),
       );
       who.className = `pp-who team-${i.team}`;
@@ -141,6 +145,12 @@ export function createPlacementPanel(): PlacementPanel {
       tooltip.textContent = at.text;
       tooltip.className = `pp-tooltip ${at.ok ? 'ok' : 'bad'}`;
       tooltip.style.transform = `translate(${Math.round(at.x + 16)}px, ${Math.round(at.y + 18)}px)`;
+    },
+    setTimer(t) {
+      timerEl.hidden = !t;
+      if (!t) return;
+      if (timerEl.textContent !== t.text) timerEl.textContent = t.text;
+      timerEl.classList.toggle('warn', t.warn);
     },
     flash(text) {
       flashEl.textContent = text;
