@@ -236,6 +236,55 @@ describe('HostSession + GuestSession over LoopbackTransport', () => {
     expect(x.host.state.kicksTaken).toBeGreaterThan(s3.kicksTaken);
   });
 
+  it('disconnect during playback (M17.3): turns go on (guard kicks for the absent guest); on resume the guest jumps to the host state, nothing missed is replayed, a stale kick is refused', async () => {
+    let now = 0;
+    const x = await setup({ now: () => now, settings: { shotTimerSec: 10 } });
+    x.hostLink.reserveMs = RESERVE_MS;
+    await draft(x);
+    // A kick reaches the guest (its screen is now playing it back)…
+    const s = x.host.state;
+    const seat = activeSeat(s)!;
+    of(x, seat).send(seat, { type: 'kick', turnId: s.turnId, input: { yaw: 0.1, power: 0.45, curve: 0, loft: 0 }, auto: false });
+    await step();
+    const kicksSeen = x.g.kicks.length;
+    expect(kicksSeen).toBeGreaterThan(0);
+    const stale = x.guest.state;
+    // …and the link dies mid-playback.
+    const token = x.guestLink.token!;
+    (x.t as unknown as { sever(): void }).sever();
+    await step(SILENCE_MS + 2000);
+    expect(x.guestLink.status.kind).toBe('lost');
+    // Three more turns on the host: its own kicks, and guard auto-kicks for the absent guest.
+    let guardKicks = 0;
+    for (let i = 0; i < 3; i++) {
+      const st = x.host.state;
+      if (activeSeat(st) === 0) {
+        x.host.send(0, { type: 'kick', turnId: st.turnId, input: { yaw: 0.3 * i, power: 0.4, curve: 0, loft: 0 }, auto: false });
+      } else {
+        now += 120_000; // well past shot timer + playback + 15 s grace
+        expect(x.host.core.tick(now)).toBe(true);
+        guardKicks++;
+      }
+      await step();
+    }
+    expect(x.host.state.kicksTaken).toBe(stale.kicksTaken + 3);
+    // Resume: one jump to the host's state, no playback of the missed kicks.
+    const link2 = new GuestLink(x.hub.connect(x.code), { name: 'Bob', clock, resume: token });
+    x.guest.attach(link2);
+    await step();
+    expect(link2.status.kind).toBe('connected');
+    expect(x.guest.state).toEqual(x.host.state);
+    expect(x.g.kicks.length).toBe(kicksSeen);
+    expect(x.g.states.at(-1)).toEqual(x.host.state);
+    // A kick for a turn that is long gone (sent from the old screen) is refused, not applied.
+    const before = x.host.state;
+    x.guest.send(1, { type: 'kick', turnId: stale.turnId, input: { yaw: 0, power: 0.5, curve: 0, loft: 0 }, auto: false });
+    await step();
+    expect(x.host.state.rev).toBe(before.rev);
+    expect(x.g.denied.length).toBeGreaterThan(0);
+    expect(guardKicks).toBeGreaterThan(0); // the absent guest really lost turns to the guard (seed 7: 2 of 3)
+  });
+
   it('after the reservation expires a new guest may take the seat', async () => {
     const x = await setup();
     x.hostLink.reserveMs = RESERVE_MS;
