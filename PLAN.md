@@ -206,6 +206,7 @@ footy/
    │  ├─ cameras.ts                # placement, aim, spectator, chase, broadcast, overhead rigs
    │  ├─ playback.ts               # KickResult player (interpolation, events, time-warp)
    │  ├─ overheadMap.ts            # hold-Tab orthographic view
+   │  ├─ placementOverlay.ts       # draft ground overlay: no-go zones, own box, X/Y rings, hover marker (M7)
    │  └─ debug.ts                  # hitboxes, axes, ruler, lab trajectory line
    ├─ ui/                          # DOM overlays
    │  ├─ dom.ts  styles.css
@@ -214,8 +215,9 @@ footy/
    └─ app/                         # glue per mode
       ├─ router.ts  session.ts     # Session interface + LocalSession
       ├─ inspect.ts                # M1 inspect view: pitch + goals, orbit camera, keys 1–4, ?debug axes/ruler
-      ├─ matchView.ts              # phase → cameras / panels / playback
-      ├─ placementView.ts  aimController.ts
+      ├─ hotseat.ts                # #/hotseat mode: names → LocalSession → matchView (M7)
+      ├─ matchView.ts              # phase → cameras / panels / playback (toss + placement since M7; play in M8)
+      ├─ placementView.ts  placementModel.ts  aimController.ts   # placementModel = pure per-pick state (M7)
       ├─ kickFlow.ts               # one turn: aim → wind-up → playback → eased move to the next kicker (M5.3; reused by M8/M10)
       ├─ practice.ts  practiceRules.ts  lab.ts
       └─ audio.ts (M14)
@@ -788,3 +790,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 - 2026-11-05 — M4: the Lab reuses the inspect view (pitch, goals, ball, orbit + keys 1–4), which gained `suspend()`/`resume()` so playback cameras can borrow the camera. Playback-camera switches (C) are a 0.9 s eased blend between continuously tracking rigs. `aimPose` (§6.1) landed in `render/cameras.ts` early for the chase start. lil-gui pinned at 0.21.0 and lazy-loaded (separate chunk). The Lab exposes `window.__lab` for scripted checks. No constants changed.
 - 2026-11-05 — M5: added `app/kickFlow.ts` (turn cycle shared by practice and the match views; `requestKick` → `play(result)` is async-ready for online) and `app/practiceRules.ts` (pure practice layout + next kicker) to §4. `shared/rng.ts` (mulberry32) was written in M5.5 for the practice layout (M6.1 builds on it). Aim drag convention: drag right turns right, drag up looks up. While the hold-Tab map is open, the kick side bar, HUD and minimap are hidden. During playback the kicker's figure stays hidden while it stands between the camera and the ball (the chase camera starts right behind it). Practice outs and goals restart with a center kickoff by the conceding team / the team that didn't touch last. No constants changed.
 - 2026-11-05 — M6: the goal `Outcome` also carries `z` (where the ball crossed the goal line), so a throw-in straight into the thrower's own goal gives the corner on the correct side (§2.6.1). `GameState.last` also records the kicking `team` and `disallowed` (throw-in goal that didn't count) for the HUD toasts.
+- 2026-11-05 — M7: added `app/hotseat.ts`, `app/placementModel.ts` (pure, tested) and `render/placementOverlay.ts` (§4). `app/matchView.ts` was created in M7 (toss + placement + a hand-off stub); M8.1 extends it with the play phase. The `Session` interface is `{ kind, state, localSeats, send(seat, intent), randomPick(seat), onState, onKick, onDenied, dispose }` (refusals arrive via `onDenied`, so Local/Host/Guest look alike). Seat names are sanitized in `newMatch` (`sanitizeName`, max 16 characters, fallback "Player 1/2"). Placement camera: left-drag pans, right-drag rotates, wheel zooms, WASD pans, T = top view; the view is framed left of the side panel. Spots on red can't be placed (rather than placed and blocked at Confirm); Confirm still re-checks the whole pick (count, keeper, guard).
