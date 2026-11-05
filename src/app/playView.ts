@@ -22,6 +22,7 @@ import { createHud } from '../ui/hud';
 import { createKickPanel, type KickSliders } from '../ui/kickPanel';
 import { createHalfTimeOverlay } from '../ui/screens';
 import { createAimController } from './aimController';
+import { audio } from './audio';
 import { INSPECT_FOV, type InspectView } from './inspect';
 import { createKickFlow, type Turn } from './kickFlow';
 import { createMapControls } from './mapControls';
@@ -107,6 +108,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
       session.send(seat, { type: 'kick', turnId: shown.turnId, input, auto });
     },
     onEvent(ev) {
+      audio.playEvent(ev);
       const t = eventToast(ev, shown.players);
       if (t) hud.toast(t);
     },
@@ -129,6 +131,8 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     const t = turnOf(shown);
     if (!t) return;
     flow.startTurn(t, { instant, spectate: !isLocalTurn(shown) });
+    // The referee starts the match, the second half and every restart after a goal (not on a resume).
+    if (!instant && shown.possession?.restart === 'kickoff') audio.whistle('kickoff');
     // The kicker may have started turning while we were still watching the last kick.
     if (remoteAim?.turnId === shown.turnId) flow.followYaw(remoteAim.yaw);
     render();
@@ -188,6 +192,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
   }
 
   function showHalfTime(): void {
+    audio.whistle('half');
     const kickoff = shown.possession?.team ?? otherTeam(0);
     halftime = createHalfTimeOverlay({
       names: [seatNameOf(shown, 0), seatNameOf(shown, 1)],

@@ -21,6 +21,7 @@ import { createHelpOverlay } from '../ui/helpOverlay';
 import { createFullTimeScreen } from '../ui/screens';
 import { createTossScreen } from '../ui/toss';
 import { createPlayersView, type PlayersView } from '../render/players';
+import { audio } from './audio';
 import { createInspectView, type InspectView } from './inspect';
 import { resultText, seatNameOf, TEAM_KIT } from './matchText';
 import { createPlacementView } from './placementView';
@@ -89,6 +90,8 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
     view?.dispose();
     view = null;
     phase = s.phase;
+    // The stadium is only loud once the match is on (and after it, at the result screen).
+    audio.setAmbience(s.phase === 'play' || s.phase === 'fulltime');
     if (world) world.controls.autoRotate = s.phase === 'toss' || s.phase === 'fulltime';
     switch (s.phase) {
       case 'toss':
@@ -175,6 +178,7 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
   }
 
   function fullTimeView(s: GameState): PhaseView {
+    audio.whistle('full');
     const r = resultText(s);
     const local = session.localSeats;
     const voted = (st: GameState): boolean => local.every((seat) => st.rematchVotes[seat]);
@@ -254,6 +258,7 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
     },
     dispose() {
       disposed = true;
+      audio.setAmbience(false);
       if (autoTimer) clearTimeout(autoTimer);
       offState();
       offKick();

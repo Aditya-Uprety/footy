@@ -21,6 +21,7 @@ import { simulateKick } from '../sim/simulate';
 import type { KickInput, KickOrigin, KickResult, SimEvent, Team } from '../sim/types';
 import { buildWorld, type WorldPlayer } from '../sim/world';
 import { h } from '../ui/dom';
+import { audio } from './audio';
 import { createInspectView, INSPECT_FOV, typingInField } from './inspect';
 
 const DEG = Math.PI / 180;
@@ -228,6 +229,7 @@ export function createLabView(stage: Stage, pitch: Pitch, opts: LabOptions): Lab
     if (state.origin.kind === 'player') players.playKick(state.origin.id);
     pb = new KickPlayback(res, {
       onEvent: (ev) => {
+        audio.playEvent(ev);
         if (ev.kind === 'catch') players.playCatch(ev.keeperId, ev);
         markEvent(res, ev);
       },

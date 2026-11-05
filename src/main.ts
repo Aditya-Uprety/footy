@@ -1,5 +1,6 @@
 // Boot: DOM layers → 3D stage (if WebGL is available) → router.
 import './ui/styles.css';
+import { audio, unlockAudioOnGesture } from './app/audio';
 import { createHotseatMode } from './app/hotseat';
 import { createInspectView, type InspectView } from './app/inspect';
 import { createLabView } from './app/lab';
@@ -16,7 +17,10 @@ import { menuScreen } from './ui/menu';
 import { placeholderScreen } from './ui/placeholders';
 
 const flags = getFlags();
+// Browsers only allow sound after a user gesture: create the audio context on the first one.
+unlockAudioOnGesture();
 const dev = import.meta.env.DEV || flags.debug;
+if (dev) (window as unknown as { __audio?: unknown }).__audio = audio;
 
 const app = document.getElementById('app')!;
 const stageEl = h('div', { id: 'stage' });

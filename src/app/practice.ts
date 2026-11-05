@@ -21,6 +21,7 @@ import { createKickPanel } from '../ui/kickPanel';
 import { createAimController } from './aimController';
 import { createInspectView } from './inspect';
 import { createMapControls } from './mapControls';
+import { audio } from './audio';
 import { createKickFlow, type FlowPhase } from './kickFlow';
 import { kickoffTurn, nextPracticeTurn, practiceLayout, type PracticePlayer, type PracticeTurn } from './practiceRules';
 
@@ -125,6 +126,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
   }
 
   function onSimEvent(ev: SimEvent): void {
+    audio.playEvent(ev);
     if (ev.kind === 'goal') toast('GOAL!', 'goal');
     else if (ev.kind === 'catch') toast('Saved!', 'save');
     else if (ev.kind === 'out') toast(ev.line === 'touch' ? 'Out — touchline' : 'Out — goal line', 'out');
@@ -257,8 +259,11 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
     },
   });
 
+  audio.setAmbience(true);
+
   return {
     dispose() {
+      audio.setAmbience(false);
       if (toastTimer) clearTimeout(toastTimer);
       help.dispose();
       maps.dispose();
