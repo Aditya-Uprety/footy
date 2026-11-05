@@ -5,9 +5,9 @@ import { createRng } from '../shared/rng';
 import { PHYS } from '../sim/constants';
 import { defaultYaw } from './host';
 import { throwInPossession } from './restarts';
-import { kick, resolveOutcome } from './rules';
+import { kick, kickCaps, resolveOutcome } from './rules';
 import { draftedMatch } from './testUtil';
-import type { GameState, Possession, RestartKind, Team } from './types';
+import type { GameState, Possession, RestartKind } from './types';
 
 const pitch = derivePitch(draftedMatch(1).settings);
 
@@ -25,23 +25,26 @@ describe('rules with real kicks', () => {
     expect(next.possession).toMatchObject({ team: 1, restart: 'kickoff' });
   });
 
-  it('a real kick over the touchline gives a throw-in to the other team at the exit x', () => {
+  it('a real kick over the touchline gives a throw-in to the other team’s player nearest the exit point', () => {
     const s = withBall(draftedMatch(5), { team: 0, restart: 'open', kicker: { kind: 'ghost', x: 10, y: PHYS.BALL_R, z: 30 } });
     const players = s.players.filter((p) => p.z < 20);
     const { result, next } = kick({ ...s, players }, 0, { yaw: Math.PI / 2, power: 0.5, curve: 0, loft: 0 });
     expect(result.outcome).toMatchObject({ kind: 'out', line: 'touch' });
-    expect(next.possession).toMatchObject({ team: 1, restart: 'throwin', kicker: { kind: 'ghost', x: 10, y: PHYS.THROW_HEIGHT } });
+    expect(result.outcome.kind === 'out' && result.outcome.line === 'touch').toBe(true);
+    const out = result.outcome as Extract<typeof result.outcome, { kind: 'out' }>;
+    const nearest = players.filter((p) => p.team === 1).sort((a, b) => Math.hypot(a.x - out.x, a.z - out.z) - Math.hypot(b.x - out.x, b.z - out.z))[0]!;
+    expect(next.possession).toMatchObject({ team: 1, restart: 'throwin', kicker: { kind: 'player', playerId: nearest.id } });
+    expect(kickCaps(next.possession!)).toEqual({});
   });
 
-  it('a throw-in straight into a goal does not count (both goals)', () => {
+  it('a goal straight from a throw-in counts (M17: the throw-in is an ordinary kick)', () => {
     const base = draftedMatch(5);
-    for (const [thrower, goalOf, restart] of [[0, 1, 'goalkick'], [0, 0, 'corner']] as [Team, Team, RestartKind][]) {
-      const s = withBall(base, throwInPossession(pitch, thrower, 40, pitch.halfWidth));
-      const next = resolveOutcome(s, s.possession!, { kind: 'goal', goalOf, z: 1, lastTouch: { team: thrower, playerId: null }, touches: 0 });
-      expect(next.score).toEqual([0, 0]);
-      expect(next.last).toMatchObject({ disallowed: true, awarded: restart });
-      expect(next.possession!.team).toBe(goalOf === thrower ? 1 - thrower : goalOf);
-    }
+    const s = withBall(base, throwInPossession(pitch, base.players, 0, 40, pitch.halfWidth));
+    expect(s.possession!.kicker.kind).toBe('player');
+    const next = resolveOutcome(s, s.possession!, { kind: 'goal', goalOf: 1, z: 1, lastTouch: { team: 0, playerId: null }, touches: 0 });
+    expect(next.score).toEqual([1, 0]);
+    expect(next.last).toMatchObject({ awarded: 'kickoff' });
+    expect(next.last!.disallowed).toBeFalsy();
   });
 
   it('a corner is taken by a ghost taker in the right corner arc', () => {

@@ -624,6 +624,7 @@ html, body {
 }
 .pp-who { font-weight: 700; font-size: 16px; padding-left: 8px; border-left: 5px solid var(--fg-dim); }
 .pp-progress { color: var(--fg-dim); }
+.pp-side { font-size: 0.85em; color: var(--fg-dim); margin: -2px 0 2px; }
 .pp-gk { width: 100%; }
 .pp-gk-hint { margin-top: -3px; color: var(--fg-dim); font-size: 12px; }
 .pp-gk-hint:empty { display: none; }

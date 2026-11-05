@@ -21,7 +21,6 @@ export interface KeyRow {
 }
 
 const S = DEFAULT_SETTINGS;
-const throwCapPct = Math.round(PHYS.THROW_POWER_CAP * 100);
 const kickoffCapPct = Math.round(PHYS.KICKOFF_POWER_CAP * 100);
 const loftMaxDeg = Math.round((PHYS.LOFT_MAX * 180) / Math.PI);
 
@@ -69,8 +68,8 @@ export const RULE_SECTIONS: readonly HelpSection[] = [
     title: 'Goals and restarts',
     bullets: [
       `After a goal, the team that conceded kicks off from the center spot. Kickoffs are capped at ${kickoffCapPct} % power, so they can't reach the goal on their own.`,
-      `Over a touchline: throw-in for the team that did not touch it last. Power is capped at ${throwCapPct} % and curve is locked. A goal straight from a throw-in does not count.`,
-      'Over a goal line: if an attacker touched it last, the defending keeper (or, with no keeper, the defender nearest the goal) gets a goal kick; if a defender touched it last, the attackers get a corner.',
+      'Over a touchline: the team that did not touch it last gets the ball, at its player closest to where it went out. That player kicks normally from where they stand.',
+      'Over a goal line: if an attacker touched it last, the defending keeper (or, with no keeper, the defender nearest the goal) gets a goal kick; if a defender touched it last, the attackers take a corner from the corner flag (no player needs to be there).',
       'Offside, fouls and cards do not exist.',
     ],
   },

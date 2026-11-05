@@ -10,7 +10,7 @@ describe('help content', () => {
     expect(text).toContain(`${DEFAULT_SETTINGS.minOpponentDist} m from the opponent`);
     expect(text).toContain(`${DEFAULT_SETTINGS.kicksPerMatch} kicks`);
     expect(text).toContain(`${DEFAULT_SETTINGS.shotTimerSec} s per kick`);
-    expect(text).toContain('capped at 45 %');
+    expect(text).toContain('closest to where it went out');
     expect(text).toContain('up to 55°');
   });
 

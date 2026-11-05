@@ -110,10 +110,29 @@ export function kickSound(rate = SAMPLE_RATE): Float32Array {
   return fadeOut(normalize(out), 0.02, rate);
 }
 
-/** The ball bouncing on grass: softer, more hollow. */
+/**
+ * The ball bouncing on grass: a short, dull "thup" (M17). The old version was
+ * a 60 ms sine and rang like an empty drum; a real ball on turf has almost no
+ * pitch, so this is mostly a damped noise slap with a very brief low body
+ * (12 ms, no ring) and a faint grass brush on top.
+ */
 export function bounceSound(rate = SAMPLE_RATE): Float32Array {
-  const out = sweepTone(rate, 0.26, 72, 118, 0.02, 0.06);
-  mixInto(out, noiseBurst(rate, 0.26, 1400, 0.012, 23), 0.35);
+  const len = 0.16;
+  const n = alloc(rate, len).length;
+  // Leather on turf: band-passed noise whose center falls 650 → 280 Hz, gone in ~20 ms.
+  const slap = bandpass(whiteNoise(n, 23), (t) => 280 + 370 * Math.exp(-t / 0.01), 0.8, rate);
+  for (let i = 0; i < n; i++) slap[i] = slap[i]! * Math.exp(-i / rate / 0.02);
+  // Weight without a note: a low body that dies before it can ring.
+  const body = sweepTone(rate, len, 150, 85, 0.006, 0.012);
+  // Grass blades: a quiet high brush.
+  const grass = highpass(whiteNoise(n, 29), 2800, rate);
+  for (let i = 0; i < n; i++) grass[i] = grass[i]! * Math.exp(-i / rate / 0.03);
+  const out = new Float32Array(n);
+  mixInto(out, normalize(slap, 1), 1);
+  mixInto(out, body, 0.55);
+  mixInto(out, grass, 0.05);
+  // A 1 ms attack so the start doesn't click.
+  for (let i = 0; i < n; i++) out[i] = out[i]! * (1 - Math.exp(-i / rate / 0.001));
   return fadeOut(normalize(out), 0.03, rate);
 }
 

@@ -139,15 +139,16 @@ describe('kick() (§2.4)', () => {
     throws(() => kick(draftedMatch(3), 1, { yaw: 0, power: 0.5, curve: 0, loft: 0 }), /Not your kick/);
   });
 
-  it('throw-ins are capped (power ≤ 45 %, curve 0)', () => {
+  it('throw-ins go to the nearest player and are not capped (M17)', () => {
     let s = draftedMatch(4);
     s = resolveOutcome(s, s.possession!, { kind: 'out', line: 'touch', x: 10, z: 34, ...noTouch(0) });
     expect(s.possession!.restart).toBe('throwin');
-    expect(kickCaps(s.possession!)).toEqual({ throwIn: true });
+    expect(s.possession!.kicker.kind).toBe('player');
+    expect(kickCaps(s.possession!)).toEqual({});
     const { result } = kick(s, 1, { yaw: -Math.PI / 2, power: 1, curve: 1, loft: 0.3 });
-    expect(result.input.power).toBe(PHYS.THROW_POWER_CAP);
-    expect(result.input.curve).toBe(0);
-    expect(result.start.y).toBe(PHYS.THROW_HEIGHT);
+    expect(result.input.power).toBe(1);
+    expect(result.input.curve).toBe(1);
+    expect(result.start.y).toBe(PHYS.BALL_R);
   });
 
   it('a player kicker kicks from their own spot', () => {

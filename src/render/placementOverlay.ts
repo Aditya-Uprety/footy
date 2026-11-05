@@ -2,11 +2,15 @@
 // circle + hitbox, the 1 m line margin), the active team's own penalty area
 // (where its keeper must stand), exclusion rings (X around the active team's
 // players, Y around opponents), the hover marker (green = legal, red = not)
-// and rings under tentative spots. Everything lies flat just above the grass.
+// and rings under tentative spots. Everything lies flat just above the grass,
+// except the goal labels (M17): a kit-coloured sign over each goal ("RED
+// GOAL · Alice defends") plus a faint kit tint on each team's own half, so it
+// is clear which side is whose.
 import * as THREE from 'three';
 import type { Point2, Pitch, Rect2 } from '../shared/pitch';
 import { HITBOX } from '../sim/constants';
 import type { Team } from '../sim/types';
+import { kitOf } from '../shared/kits';
 import { KIT_COLORS } from './players';
 
 export interface PlacementOverlay {
@@ -23,6 +27,8 @@ export interface PlacementOverlay {
   setPlayers(list: readonly { x: number; z: number; team: Team; gk: boolean }[]): void;
   /** The hover marker at (x, z): ok = legal, null = hidden. `gk` sizes it for a keeper. */
   setHover(h: { x: number; z: number; ok: boolean; gk: boolean } | null): void;
+  /** Labels the goals and tints the halves: `names[t]` = the seat playing team t. */
+  setSides(names: readonly [string, string]): void;
   /** Animates the tentative rings; call every frame. */
   update(dt: number): void;
   dispose(): void;
@@ -64,6 +70,40 @@ function overlayMat(color: THREE.ColorRepresentation, opacity: number): THREE.Me
     // True colours: the overlay is UI, not lit scenery.
     toneMapped: false,
   });
+}
+
+/** A sign over a goal: kit-coloured plate, big "RED GOAL", the defender's name under it. */
+function goalSignTexture(kit: string, color: number, name: string): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 200;
+  const g = c.getContext('2d')!;
+  const hex = `#${color.toString(16).padStart(6, '0')}`;
+  g.fillStyle = 'rgba(10, 14, 20, 0.72)';
+  g.beginPath();
+  g.roundRect(4, 4, 504, 192, 28);
+  g.fill();
+  g.fillStyle = hex;
+  g.beginPath();
+  g.roundRect(4, 4, 30, 192, [28, 0, 0, 28]);
+  g.fill();
+  g.lineWidth = 6;
+  g.strokeStyle = hex;
+  g.beginPath();
+  g.roundRect(7, 7, 498, 186, 26);
+  g.stroke();
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillStyle = '#ffffff';
+  g.font = '800 76px system-ui, sans-serif';
+  g.fillText(`${kit.toUpperCase()} GOAL`, 270, 78, 440);
+  g.font = '600 40px system-ui, sans-serif';
+  g.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  g.fillText(name ? `${name} defends` : 'defends this end', 270, 150, 440);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
 }
 
 function rectGeo(r: Rect2): THREE.BufferGeometry {
@@ -111,6 +151,28 @@ export function createPlacementOverlay(pitch: Pitch, spacing: Spacing): Placemen
   mesh(flat(new THREE.CircleGeometry(ccR, 96)), overlayMat(NO_GO, 0.3), 1, 'nogo-center');
   mesh(flat(new THREE.RingGeometry(ccR - 0.12, ccR, 96)), overlayMat(NO_GO, 0.75), 2, 'nogo-center-edge');
   mesh(frameGeo(pitch.field, pitch.placementBounds), overlayMat(NO_GO, 0.45), 1, 'nogo-margin');
+
+  // ---- sides: half tints + goal signs (M17) ---------------------------------
+  const halfMats = pitch.ends.map(() => keep(overlayMat(0xffffff, 0.1)));
+  pitch.ends.forEach((end, i) => {
+    const x0 = Math.min(end.goalLineX, 0);
+    const x1 = Math.max(end.goalLineX, 0);
+    mesh(rectGeo({ xMin: x0, xMax: x1, zMin: pitch.field.zMin, zMax: pitch.field.zMax }), halfMats[i]!, 0, `half-tint-${end.team}`);
+  });
+  const signs = pitch.ends.map((end) => {
+    const mat = new THREE.SpriteMaterial({ transparent: true, depthTest: false, depthWrite: false });
+    keep(mat);
+    const sprite = new THREE.Sprite(mat);
+    sprite.name = `goal-sign-${end.team}`;
+    sprite.scale.set(19, 19 * (200 / 512), 1);
+    // Above the goal, a little behind the line so it doesn't hide the box.
+    sprite.position.set(end.goalLineX + end.side * 4, 7.5, 0);
+    sprite.renderOrder = 20;
+    sprite.visible = false;
+    group.add(sprite);
+    return { sprite, mat, tex: null as THREE.CanvasTexture | null };
+  });
+  keep({ dispose: () => signs.forEach((s) => s.tex?.dispose()) });
 
   // ---- own box -------------------------------------------------------------
   const boxMat = keep(overlayMat(BOX, 0.1));
@@ -248,6 +310,18 @@ export function createPlacementOverlay(pitch: Pitch, spacing: Spacing): Placemen
       discs.count = discEdges.count = n;
       discs.instanceMatrix.needsUpdate = discEdges.instanceMatrix.needsUpdate = true;
       if (discs.instanceColor) discs.instanceColor.needsUpdate = true;
+    },
+    setSides(names) {
+      pitch.ends.forEach((end, i) => {
+        const kit = kitOf(end.team);
+        halfMats[i]!.color.setHex(kit.outfield);
+        const sign = signs[i]!;
+        sign.tex?.dispose();
+        sign.tex = typeof document === 'undefined' ? null : goalSignTexture(kit.name, kit.outfield, names[end.team]);
+        sign.mat.map = sign.tex;
+        sign.mat.needsUpdate = true;
+        sign.sprite.visible = !!sign.tex;
+      });
     },
     setHover(hv) {
       hover.visible = !!hv;

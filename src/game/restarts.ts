@@ -2,11 +2,9 @@
 // change and the next possession for each Outcome.
 //
 //   goal  → the scoring team gets +1; the conceding team kicks off.
-//           Exception: straight from a throw-in with no touch after the throw
-//           it doesn't count: into the opponent's goal → goal kick to the
-//           defenders; into the thrower's own goal → corner to the opponent.
-//   out over a touchline → throw-in to the team that didn't touch last, a
-//           ghost taker at the exit point (x clamped to ±(L/2 − 1)).
+//   out over a touchline → throw-in to the team that didn't touch last: its
+//           player closest to the exit point gets the ball where they stand
+//           (M17; it is an ordinary kick, so no caps and goals count).
 //   out over a goal line, at the goal defended by D →
 //           last touch by the attackers: goal kick, D's keeper has the ball;
 //           last touch by D: corner to the attackers on the side it went out.
@@ -25,7 +23,7 @@ export interface RestartDecision {
   awarded: RestartKind;
   /** The team that scored on this kick, or null. */
   scored: Team | null;
-  /** A goal straight from a throw-in that didn't count (§2.6.1). */
+  /** A goal that didn't count. Always false since M17 (throw-ins are ordinary kicks); kept for the log and the wire. */
   disallowed: boolean;
 }
 
@@ -46,8 +44,16 @@ export function kickoffPossession(team: Team): Possession {
   return { team, kicker: ghost(kickoffSpot()), restart: 'kickoff' };
 }
 
-/** Throw-in for `team` where the ball left over the touchline at (x, ±W/2). */
-export function throwInPossession(pitch: Pitch, team: Team, xExit: number, zExit: number): Possession {
+/**
+ * Throw-in for `team` where the ball left over the touchline at (x, ±W/2)
+ * (§2.6.3, M17): `team`'s player closest to the exit point gets the ball where
+ * they stand (ties → lower id). Without players (never in a match) a ghost
+ * taker stands at the exit point.
+ */
+export function throwInPossession(pitch: Pitch, players: GameState['players'], team: Team, xExit: number, zExit: number): Possession {
+  const mine = players.filter((p) => p.team === team);
+  const nearest = mine.length ? closestPlayer(mine, xExit, zExit, otherTeam(team)) : null;
+  if (nearest) return { team, kicker: { kind: 'player', playerId: nearest.id }, restart: 'throwin' };
   return { team, kicker: ghost(throwInSpot(dims(pitch), xExit, sign(zExit))), restart: 'throwin' };
 }
 
@@ -92,16 +98,11 @@ export function decideRestart(
   switch (outcome.kind) {
     case 'goal': {
       const conceding = outcome.goalOf;
-      if (kick.restart === 'throwin' && outcome.touches === 0) {
-        // §2.6.1: no goal straight from a throw-in.
-        if (conceding !== kick.team) return done(goalKickPossession(state.players, conceding, pitch), null, true);
-        return done(cornerPossession(pitch, otherTeam(kick.team), conceding, outcome.z), null, true);
-      }
       return done(kickoffPossession(conceding), otherTeam(conceding));
     }
     case 'out': {
       const last = outcome.lastTouch.team;
-      if (outcome.line === 'touch') return done(throwInPossession(pitch, otherTeam(last), outcome.x, outcome.z));
+      if (outcome.line === 'touch') return done(throwInPossession(pitch, state.players, otherTeam(last), outcome.x, outcome.z));
       const defending: Team = outcome.x < 0 ? 0 : 1;
       if (last !== defending) return done(goalKickPossession(state.players, defending, pitch));
       return done(cornerPossession(pitch, otherTeam(defending), defending, outcome.z));

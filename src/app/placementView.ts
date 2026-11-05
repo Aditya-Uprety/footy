@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { PICK_COUNT, PLAYERS_PER_TEAM, pickInfo, randomPick } from '../game/draft';
 import { createRng } from '../shared/rng';
 import { SHOT_TIMER_WARN } from './shotTimer';
-import { timerText } from './matchText';
+import { seatNameOf, timerText } from './matchText';
 import { activeSeat } from '../game/rules';
 import type { GameState, Seat, Team } from '../game/types';
 import { placementPose } from '../render/cameras';
@@ -88,6 +88,7 @@ export function createPlacementView(opts: PlacementViewOptions): PlacementView {
 
   // ---- scene pieces ----------------------------------------------------------
   const overlay = createPlacementOverlay(pitch, settings);
+  overlay.setSides([seatNameOf(session.state, 0), seatNameOf(session.state, 1)]);
   stage.scene.add(overlay.group);
   const tentView: PlayersView = createPlayersView({ hitboxes: opts.debug, stage });
   stage.scene.add(tentView.group);

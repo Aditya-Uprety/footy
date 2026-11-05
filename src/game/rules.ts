@@ -156,9 +156,13 @@ export function applyPick(s: GameState, team: Team, spots: readonly SpotInput[])
   return bump(s, { players, pick: s.pick + 1 });
 }
 
-/** Restart caps for a possession: throw-ins cap power and lock curve (§2.6.3); kickoffs cap power (§2.7.1). */
+/**
+ * Restart caps for a possession: kickoffs cap power (§2.7.1). Throw-ins are
+ * ordinary kicks by the nearest player since M17 (§2.6.3); a ghost-taker
+ * throw-in (only without players) keeps the old throw caps.
+ */
 export function kickCaps(p: Possession): KickCaps {
-  if (p.restart === 'throwin') return { throwIn: true };
+  if (p.restart === 'throwin' && p.kicker.kind === 'ghost') return { throwIn: true };
   if (p.restart === 'kickoff') return { kickoff: true };
   return {};
 }

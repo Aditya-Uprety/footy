@@ -69,7 +69,7 @@ describe('match log and stats (M15.3)', () => {
     expect(matchStats(s.log)[1].saves).toBe(0);
   });
 
-  it('own goals count for the opponent and are flagged; a throw-in goal that does not count is a shot, not a goal', () => {
+  it('own goals count for the opponent and are flagged; a goal straight from a throw-in counts', () => {
     // Red kicks off, Blue defender touches it in, then it goes into Blue's own goal? No: own goal = last touch by the goal's team.
     const own = play(s0, [{ kind: 'goal', goalOf: 0, z: 0, lastTouch: touch(0, 3), touches: 1 }]);
     expect(own.log[0]).toMatchObject({ result: 'goal', scored: 1, own: true, shot: 0 });
@@ -77,8 +77,8 @@ describe('match log and stats (M15.3)', () => {
 
     const thrower = { ...s0.possession!, team: 0 as Team, restart: 'throwin' as const };
     const s = resolveOutcome({ ...s0, possession: thrower }, thrower, { kind: 'goal', goalOf: 1, z: 0, lastTouch: touch(0), touches: 0 });
-    expect(s.log[0]).toMatchObject({ result: 'nogoal', scored: null, shot: 2 });
-    expect(matchStats(s.log)[0]).toMatchObject({ goals: 0, shots: 1, onTarget: 1 });
+    expect(s.log[0]).toMatchObject({ result: 'goal', scored: 0, shot: 2 });
+    expect(matchStats(s.log)[0]).toMatchObject({ goals: 1, shots: 1, onTarget: 1 });
   });
 
   it('goals in the log always equal the score, and possession is the share of kicks', () => {

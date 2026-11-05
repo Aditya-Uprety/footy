@@ -37,40 +37,42 @@ describe('goals (§2.6.1–2)', () => {
   });
 });
 
-describe('throw-in goal exception (§2.6.1)', () => {
-  it('straight into the opponent’s goal → goal kick to the defenders', () => {
+describe('goals straight from a throw-in count (M17: throw-ins are ordinary kicks)', () => {
+  it('into the opponent’s goal: a goal, the conceding team kicks off', () => {
     const d = decide(0, { kind: 'goal', goalOf: 1, z: 2, ...touch(0, 0) }, 'throwin');
-    expect(d.scored).toBeNull();
-    expect(d.disallowed).toBe(true);
-    expect(d.possession).toEqual({ team: 1, kicker: { kind: 'player', playerId: 2 }, restart: 'goalkick' });
+    expect(d.scored).toBe(0);
+    expect(d.disallowed).toBe(false);
+    expect(d.possession).toMatchObject({ team: 1, restart: 'kickoff' });
   });
-  it('straight into the thrower’s own goal → corner to the opponent on that side', () => {
+  it('into the thrower’s own goal: an own goal', () => {
     const d = decide(1, { kind: 'goal', goalOf: 1, z: -2, ...touch(1, 0) }, 'throwin');
-    expect(d.scored).toBeNull();
-    expect(d.disallowed).toBe(true);
-    expect(d.possession.team).toBe(0);
-    expect(d.possession.restart).toBe('corner');
-    expect(d.possession.kicker).toMatchObject({ kind: 'ghost', x: L2 - 0.5, z: -(W2 - 0.5) });
-  });
-  it('counts after a touch', () => {
-    const d = decide(0, { kind: 'goal', goalOf: 1, z: 2, ...touch(1, 1) }, 'throwin');
     expect(d.scored).toBe(0);
     expect(d.disallowed).toBe(false);
   });
 });
 
-describe('touchline (§2.6.3)', () => {
-  it('throw-in to the team that did not touch last, at the exit point', () => {
+describe('touchline (§2.6.3, M17)', () => {
+  it('throw-in to the team that did not touch last: its player closest to the exit point has the ball', () => {
+    // Exit at (12.5, +W/2): B's keeper (49, −3) is 52.0 m away, #4 (10, −20) 54.1 m.
     const d = decide(0, { kind: 'out', line: 'touch', x: 12.5, z: W2, ...touch(0, 0) });
     expect(d.possession.team).toBe(1);
     expect(d.awarded).toBe('throwin');
-    expect(d.possession.kicker).toEqual({ kind: 'ghost', x: 12.5, y: PHYS.THROW_HEIGHT, z: W2 - PHYS.BALL_R });
+    expect(d.possession.kicker).toEqual({ kind: 'player', playerId: 2 });
+    // Exit at (12.5, −W/2): now #4 is much closer.
+    expect(decide(0, { kind: 'out', line: 'touch', x: 12.5, z: -W2, ...touch(0) }).possession.kicker).toEqual({ kind: 'player', playerId: 4 });
+    // Exit near A's goal line: A's keeper (−50, 2) is closer than #3 (−10, 20).
     const e = decide(0, { kind: 'out', line: 'touch', x: -L2 + 0.2, z: -W2, ...touch(1) });
     expect(e.possession.team).toBe(0);
-    expect(e.possession.kicker).toMatchObject({ x: -(L2 - 1), z: -(W2 - PHYS.BALL_R) });
+    expect(e.possession.kicker).toEqual({ kind: 'player', playerId: 1 });
+    // Exit near the halfway line on +z: A's #3 (−10, 20) beats the keeper.
+    expect(decide(1, { kind: 'out', line: 'touch', x: 0, z: W2, ...touch(1) }).possession.kicker).toEqual({ kind: 'player', playerId: 3 });
   });
-  it('a throw straight back out goes to the other team', () => {
+  it('a throw-in kicked straight back out goes to the other team', () => {
     expect(decide(1, { kind: 'out', line: 'touch', x: 0, z: W2, ...touch(1, 0) }, 'throwin').possession.team).toBe(0);
+  });
+  it('without players of that team a ghost taker throws from the exit point (fallback)', () => {
+    const d = decideRestart({ settings, players: players.filter((p) => p.team === 0) }, { team: 0, restart: 'open' }, { kind: 'out', line: 'touch', x: 12.5, z: W2, ...touch(0, 0) });
+    expect(d.possession.kicker).toEqual({ kind: 'ghost', x: 12.5, y: PHYS.THROW_HEIGHT, z: W2 - PHYS.BALL_R });
   });
 });
 

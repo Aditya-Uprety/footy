@@ -58,6 +58,7 @@ export function createPlacementPanel(): PlacementPanel {
   const banner = h('div', { class: 'pick-banner', 'data-screen': 'placement' });
   const timerEl = h('span', { class: 'pp-timer', hidden: true, 'aria-label': 'Time left for this pick' });
   const who = h('div', { class: 'pp-who' });
+  const side = h('div', { class: 'pp-side' });
   const progress = h('div', { class: 'pp-progress' });
   const gkBtn = h('button', { type: 'button', class: 'btn pp-gk', title: 'Goalkeeper (G)' });
   const gkHint = h('div', { class: 'pp-gk-hint' });
@@ -88,6 +89,7 @@ export function createPlacementPanel(): PlacementPanel {
     'div',
     { class: 'panel placement-panel', 'data-screen': 'placement-panel' },
     who,
+    side,
     progress,
     gkBtn,
     gkHint,
@@ -121,6 +123,7 @@ export function createPlacementPanel(): PlacementPanel {
       );
       who.className = `pp-who team-${i.team}`;
       who.textContent = `${i.seatName} · ${kit}`;
+      side.textContent = `Defends the ${kit.toUpperCase()} GOAL · attacks the ${KIT_NAME[i.team === 0 ? 1 : 0].toUpperCase()} GOAL`;
       progress.textContent = `This pick ${i.placed}/${n} · team ${i.teamBefore + i.placed}/${i.teamSize}`;
 
       el.classList.toggle('waiting', !!i.waiting);

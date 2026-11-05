@@ -49,7 +49,7 @@ describe('match text (M8.3)', () => {
     expect(eventToast({ kind: 'ground', t: 1, x: 0, y: 0, z: 0, speed: 3 }, s.players)).toBeNull();
   });
 
-  it('after-kick toasts: goal with the score, restarts, disallowed throw-in goal', () => {
+  it('after-kick toasts: goal with the score, restarts, a goal straight from a throw-in', () => {
     const goal: Outcome = { kind: 'goal', goalOf: 1, z: 0, lastTouch: touch(0), touches: 0 };
     const afterGoal = resolveOutcome(s, s.possession!, goal);
     expect(afterKickToast(s, afterGoal)).toEqual({ text: 'Goal — Red', kind: 'goal', sub: 'Red 1 – 0 Blue' });
@@ -68,7 +68,7 @@ describe('match text (M8.3)', () => {
 
     const throwIn: Possession = { team: 0, kicker: { kind: 'ghost', x: 40, y: 1.8, z: 33.89 }, restart: 'throwin' };
     const straight: Outcome = { kind: 'goal', goalOf: 1, z: 1, lastTouch: touch(0), touches: 0 };
-    expect(afterKickToast(s, resolveOutcome(s, throwIn, straight))).toEqual({ text: 'No goal', kind: 'info', sub: 'Straight from a throw-in' });
+    expect(afterKickToast(s, resolveOutcome(s, throwIn, straight))?.text).toBe('Goal — Red');
 
     const stop: Outcome = { kind: 'stop', x: 5, z: 5, lastTouch: touch(0), touches: 0 };
     expect(afterKickToast(s, resolveOutcome(s, s.possession!, stop))).toBeNull();
