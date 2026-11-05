@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M1 — Pitch and goals (M0 done)
-- **Next task:** M1.4 Lighting, soft shadows, sky + fog
+- **Next task:** M1.5 Inspect cameras (keys 1–4) + `?debug` axes and ruler
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M1.3 done)
+- **Last updated:** 2026-11-05 (M1.4 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -24,7 +24,7 @@
 - [x] M1.1 Striped grass + apron, receives shadows
 - [x] M1.2 All pitch markings from `derivePitch`
 - [x] M1.3 Goals (posts, bar, net) + corner flags
-- [ ] M1.4 Lighting, soft shadows, sky + fog
+- [x] M1.4 Lighting, soft shadows, sky + fog
 - [ ] M1.5 Inspect cameras (keys 1–4) + `?debug` axes and ruler
 - [ ] M1.A Acceptance checks passed (browser pane) and reported to the user
 

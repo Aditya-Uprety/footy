@@ -20,7 +20,7 @@ const COLORS = {
   stripeLight: new THREE.Color(0x4f9a3f),
   stripeDark: new THREE.Color(0x3f8634),
   apron: new THREE.Color(0x3b7d31),
-  outer: 0x2f4a2a,
+  outer: 0x52734a,
   line: 0xf4f6f2,
 };
 

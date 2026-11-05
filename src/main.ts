@@ -7,7 +7,7 @@ import { DEFAULT_SETTINGS } from './game/settings';
 import { createFpsCounter } from './render/debug';
 import { createGoalsView } from './render/goals';
 import { createPitchView } from './render/pitch';
-import { createStage, type Stage } from './render/scene';
+import { createEnvironment, createStage, type Stage } from './render/scene';
 import { derivePitch } from './shared/pitch';
 import { clear, h } from './ui/dom';
 import { placeholderScreen } from './ui/placeholders';
@@ -41,10 +41,7 @@ function tryCreateStage(): Stage | null {
 /** M0 inspect view: temporary ground with an orbit camera. Replaced per mode later. */
 function setupInspectView(stage: Stage): void {
   const pitch = derivePitch(DEFAULT_SETTINGS);
-  stage.scene.add(new THREE.HemisphereLight(0xdfefff, 0x3a5a2a, 1.2));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-  sun.position.set(-30, 60, 25);
-  stage.scene.add(sun);
+  createEnvironment(stage.scene, pitch);
   stage.scene.add(createPitchView(pitch, stage.renderer.capabilities.getMaxAnisotropy()).group);
   stage.scene.add(createGoalsView(pitch).group);
 
