@@ -5,8 +5,8 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M13 — UI/UX polish and settings (M13.1 done) (M0–M12 done)
-- **Next task:** M13.2 How-to-play screen
+- **Current milestone:** M13 — UI/UX polish and settings (M13.1–M13.2 done) (M0–M12 done)
+- **Next task:** M13.3 Lobby settings panel synced to guest
 - **Model for next task:** Sonnet 5.5 · High effort
 - **Last updated:** 2026-11-05 (M12.A done; M12 complete; live at https://aditya-uprety.github.io/footy/; two-device check on the user's Wi-Fi from M10 still to do by the user)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
@@ -118,7 +118,7 @@
 
 ## M13 — UI/UX polish and settings · Sonnet 5.5 High
 - [x] M13.1 Consistent theme across all screens
-- [ ] M13.2 How-to-play screen
+- [x] M13.2 How-to-play screen
 - [ ] M13.3 Lobby settings panel synced to guest
 - [ ] M13.4 Team names, kit colors, key-binding help
 - [ ] M13.A Acceptance checks passed and reported to the user
@@ -179,3 +179,4 @@
 - 2026-11-05 — M12.4: grass detail map is now `grassDetailPixels()` (exported from `render/pitch.ts`, tested): 256² tileable texture over an 8 m tile (≈3 cm/texel) with broad wear patches, mid-scale mottling, short blade streaks along x and fine speckle, all wrapping (no seams), deterministic. Ball gained a bump map from the same panel classifier (stitched seams sit lower, with a soft shoulder; `bumpScale` 0.6). Budget measured with `?debug` / `renderer.info` in headless Chrome: practice 112 calls, hot-seat with 22 players 120 calls in aim, wind-up, playback and TV view alike (≤ 150; includes the shadow pass; the stadium casts no shadows), ≈ 324k triangles. FPS cannot be measured here (SwiftShader shows ~10 fps, meaningless): **the ≥ 60 fps @ 1080p check is the user's, in M12.A** (`?debug` shows FPS and draw calls). Not done: the distant-line dashing watch item (needs a real GPU to judge) and merging the goal tubes (not needed, we are under budget). `npm run check`: 41 files, 387 tests green.
 - 2026-11-05 — M12.A: headless-Chrome visual review of hot-seat/practice/Lab views (22 players, stadium, grass, ball close-up): no console errors, 120 draw calls max, `npm run check` green (387 tests). The one thing I cannot verify: ≥ 60 fps at 1080p on the user's real GPU (headless SwiftShader is software); the user checks it via `?debug`. If it is below 60, tell the next chat: first levers are shadow map size (4096 → 2048), DPR cap, crowd density (`crowdDensity`) — M16.3 adds a performance mode anyway.
 - 2026-11-05 — M13.1: `ui/styles.css` now starts with one token block (surfaces, text, accent, ok/bad/info, `--team-0` / `--team-1` + `-light` variants, radii, mono font, shadow, ease); every hardcoded color and the duplicate button rules were replaced by tokens. Team colors in CSS are variables: **M13.4 should write kit colors into `--team-0` / `--team-1` at runtime** (the 3D side reads `KIT_COLORS` in `render/players.ts`). Lab and Practice buttons now use `.btn .btn-sm`; cards animate in; `prefers-reduced-motion` respected; focus rings are global. Verified with webgl-shot (menu, hot-seat draft, practice): no console errors; `npm run check` 387 tests green.
+- 2026-11-05 — M13.2: `#/howto` (`ui/help.ts`: `RULE_SECTIONS`, `KEY_ROWS`, `PLACEMENT_ROWS`, `controlsTable()`, `howToPlayScreen()`); router, menu entry and `help.test.ts` added. The key table already lists **H = this help**: M13.4 must implement the in-match H overlay (reuse `controlsTable()`). Verified with webgl-shot: no console errors; 390 tests green.

@@ -11,6 +11,7 @@ import { createFpsCounter } from './render/debug';
 import { createStage, type Stage } from './render/scene';
 import { derivePitch } from './shared/pitch';
 import { clear, h } from './ui/dom';
+import { howToPlayScreen } from './ui/help';
 import { menuScreen } from './ui/menu';
 import { placeholderScreen } from './ui/placeholders';
 
@@ -109,13 +110,14 @@ function showRoute(route: Route): void {
   if (mode?.key !== key || kind !== 'online') clear(screenEl);
   ensureMode(kind, route);
   if (route.name === 'menu') screenEl.append(menuScreen({ dev }));
+  else if (route.name === 'howto') screenEl.append(howToPlayScreen());
   else if (kind === 'inspect' || (!stage && route.name !== 'hotseat' && kind !== 'online')) screenEl.append(placeholderScreen(route, { dev }));
   if (mode?.inspect) {
     // The menu backdrop slowly turns around the pitch.
-    mode.inspect.controls.autoRotate = route.name === 'menu';
+    mode.inspect.controls.autoRotate = route.name === 'menu' || route.name === 'howto';
     mode.inspect.controls.autoRotateSpeed = 0.35;
   }
-  document.title = route.name === 'menu' ? 'Footy' : `Footy · ${route.name}`;
+  document.title = route.name === 'menu' ? 'Footy' : route.name === 'howto' ? 'Footy · How to play' : `Footy · ${route.name}`;
 }
 
 startRouter(showRoute);

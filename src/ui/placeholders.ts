@@ -7,7 +7,7 @@ interface PlaceholderInfo {
   text: string;
 }
 
-const INFO: Record<Exclude<Route['name'], 'menu'>, PlaceholderInfo> = {
+const INFO: Record<Exclude<Route['name'], 'menu' | 'howto'>, PlaceholderInfo> = {
   hotseat: { title: 'Hot-seat match', text: 'Two players on one device. Coming in M7–M8.' },
   host: { title: 'Host online', text: 'Create a room and share the code. Coming in M9–M10.' },
   join: { title: 'Join online', text: 'Join a friend’s room with a code. Coming in M9–M10.' },
@@ -16,7 +16,7 @@ const INFO: Record<Exclude<Route['name'], 'menu'>, PlaceholderInfo> = {
 };
 
 /** Builds the placeholder panel for a route that has no real screen yet. */
-export function placeholderScreen(route: Exclude<Route, { name: 'menu' }>, _opts: { dev: boolean }): HTMLElement {
+export function placeholderScreen(route: Exclude<Route, { name: 'menu' | 'howto' }>, _opts: { dev: boolean }): HTMLElement {
   const info = INFO[route.name];
   const extra =
     route.name === 'join'

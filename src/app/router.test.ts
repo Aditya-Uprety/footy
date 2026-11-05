@@ -10,6 +10,7 @@ describe('parseRoute', () => {
     expect(parseRoute('#/join/ABCDE')).toEqual({ name: 'join', code: 'ABCDE' });
     expect(parseRoute('#/join')).toEqual({ name: 'join', code: null });
     expect(parseRoute('#/practice')).toEqual({ name: 'practice' });
+    expect(parseRoute('#/howto')).toEqual({ name: 'howto' });
     expect(parseRoute('#/lab')).toEqual({ name: 'lab' });
   });
 
@@ -25,7 +26,7 @@ describe('parseRoute', () => {
   });
 
   it('round-trips through routeToHash', () => {
-    for (const h of ['#/', '#/hotseat', '#/host', '#/join/K7MPQ', '#/practice', '#/lab']) {
+    for (const h of ['#/', '#/hotseat', '#/host', '#/join/K7MPQ', '#/practice', '#/howto', '#/lab']) {
       expect(routeToHash(parseRoute(h))).toBe(h);
     }
   });

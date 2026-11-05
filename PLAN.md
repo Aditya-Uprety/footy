@@ -144,6 +144,7 @@ Versions seen on npm at planning time (pin exact versions in M0): three 0.187.0,
 - **Hot-seat** `#/hotseat`: `LocalSession` runs `HostCore` in the page; both seats are local.
 - **Online host** `#/host`: `HostSession` = HostCore + PeerJS transport; local seat 0, remote seat 1.
 - **Online guest** `#/join/CODE`: `GuestSession` renders snapshots and sends intents.
+- **How to play** `#/howto`: rules + controls (M13.2).
 - **Practice** `#/practice`: solo sandbox with a random layout; possession switching only (no rules engine).
 - **Physics Lab** `#/lab`: dev tool; the **only** place debug trajectory lines may appear.
 
@@ -804,3 +805,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 - 2026-11-05 — M12.2: added `render/figureAnim.ts` (pure poses for the kick, the keeper's catch and the possessor ring) to §4. `PlayersView` gained `setPossessor`, `playWindup`, `playKick`, `playCatch`, `relax`; players that animate swap their merged mesh for a body + legs + arms rig. The ring is hidden while the possessor's figure is hidden (the aim view), so it never marks anything about the aim. No rules or constants changed.
 - 2026-11-05 — M12.3: `render/stadium.ts` added to §4's render list in full (stands, instanced crowd, ad boards, floodlight towers); it is part of the shared inspect view and is hidden while the hold-Tab overhead map is shown. Ad boards sit 4.5 m beyond the lines (inside the apron); the stand front wall is 9 m beyond them. No rules or constants changed.
 - 2026-11-05 — M12.4: grass detail texture (`grassDetailPixels`) and a ball bump map; measured 120 draw calls in the busiest view (budget 150). No rules or constants changed.
+- 2026-11-05 — M13.1–M13.2: `ui/styles.css` is token-driven (kit colors are `--team-0` / `--team-1`, written at runtime in M13.4). New route `#/howto` (menu entry "How to play") rendered by `ui/help.ts`, whose rule text and control tables (`RULE_SECTIONS`, `KEY_ROWS`) also feed the in-match H overlay (M13.4); numbers come from `DEFAULT_SETTINGS` / `PHYS`. No rules or constants changed.

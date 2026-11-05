@@ -7,6 +7,7 @@ export type Route =
   | { name: 'host' }
   | { name: 'join'; code: string | null }
   | { name: 'practice' }
+  | { name: 'howto' }
   | { name: 'lab' };
 
 export type RouteName = Route['name'];
@@ -57,6 +58,8 @@ export function parseRoute(hash: string): Route {
     }
     case 'practice':
       return { name: 'practice' };
+    case 'howto':
+      return { name: 'howto' };
     case 'lab':
       return { name: 'lab' };
     default:
