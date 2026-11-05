@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { getFlags, startRouter, type Route } from './app/router';
 import { DEFAULT_SETTINGS } from './game/settings';
 import { createFpsCounter } from './render/debug';
-import { createTempGround } from './render/pitch';
+import { createPitchView } from './render/pitch';
 import { createStage, type Stage } from './render/scene';
 import { derivePitch } from './shared/pitch';
 import { clear, h } from './ui/dom';
@@ -44,7 +44,7 @@ function setupInspectView(stage: Stage): void {
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.position.set(-30, 60, 25);
   stage.scene.add(sun);
-  stage.scene.add(createTempGround(pitch));
+  stage.scene.add(createPitchView(pitch, stage.renderer.capabilities.getMaxAnisotropy()).group);
 
   const camera = stage.camera as THREE.PerspectiveCamera;
   camera.position.set(0, pitch.halfLength * 0.9, pitch.halfWidth * 2.1);
