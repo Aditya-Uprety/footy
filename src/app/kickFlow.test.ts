@@ -10,7 +10,7 @@ import { simulateKick } from '../sim/simulate';
 import type { KickInput, KickOrigin, KickResult } from '../sim/types';
 import { buildWorld } from '../sim/world';
 import { AIM, aimBall, aimStatePose, defaultAimPitch, type AimState } from './aimController';
-import { createKickFlow, END_HOLD_TIME, TRANSITION_TIME, WINDUP_TIME, type FlowPhase, type Turn } from './kickFlow';
+import { createKickFlow, END_HOLD_TIME, kickerBlocksView, TRANSITION_TIME, WINDUP_TIME, type FlowPhase, type Turn } from './kickFlow';
 
 const pitch = derivePitch(DEFAULT_SETTINGS);
 const players = [
@@ -133,8 +133,15 @@ describe('kick flow', () => {
     expect(r.flow.phase).toBe('windup'); // the result waits for the wind-up
     r.tick(WINDUP_TIME * 0.6);
     expect(r.flow.phase).toBe('playback');
-    expect(r.view.hidden).toBeNull(); // kicker visible during playback
+    // The chase camera starts right behind the kicker: hidden until it has pulled away.
+    expect(r.view.hidden).toBe(1);
     expect(r.view.yaws.get(1)).toBe(0);
+    r.tick(0.3);
+    expect(r.view.hidden).toBe(1); // the camera backs off along the kick line: still in the way
+    r.tick(2.5);
+    // By now the chase camera has passed the kicker.
+    expect(r.camera.position.x).toBeGreaterThan(-10);
+    expect(r.view.hidden).toBeNull();
 
     // A kick during playback is ignored.
     r.pressKick();
@@ -142,7 +149,7 @@ describe('kick flow', () => {
 
     const res = r.flow.playback!.result;
     // The ball hits #2 (straight along +x) — rolling ends somewhere; play to the end.
-    r.tick(res.duration + 0.5);
+    r.tick(res.duration - 2.8 + 0.5);
     expect(['hold', 'idle']).toContain(r.flow.phase);
     r.tick(END_HOLD_TIME + 0.1);
     expect(r.log.ended).toEqual([res]);
@@ -187,5 +194,15 @@ describe('kick flow', () => {
     expect(r.flow.phase).toBe('windup');
     realPlay(deferred!);
     expect(r.flow.phase).toBe('playback');
+  });
+});
+
+describe('kickerBlocksView', () => {
+  it('hides a kicker right at the camera or on the sight line to the ball', () => {
+    expect(kickerBlocksView(0, 0, 20, 0, 1, 0.5)).toBe(true); // close to the camera
+    expect(kickerBlocksView(0, 0, 20, 0, 5, 0.8)).toBe(true); // on the line
+    expect(kickerBlocksView(0, 0, 20, 0, 5, 2)).toBe(false); // off to the side
+    expect(kickerBlocksView(0, 0, 20, 0, -5, 0)).toBe(false); // behind the camera
+    expect(kickerBlocksView(0, 0, 20, 0, 25, 0)).toBe(false); // beyond the ball
   });
 });

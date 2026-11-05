@@ -32,6 +32,31 @@ export const END_HOLD_TIME = 0.9;
 export const TRANSITION_TIME = 1.0;
 /** Fraction of the move after which the new kicker's figure is hidden (the camera is close by then). */
 export const HIDE_KICKER_AT = 0.6;
+/**
+ * During playback the kicker stays hidden while they would block the view:
+ * the chase camera starts right behind them (the aim pose is ~1.7 m behind
+ * their center) and backs off along the kick line. Hidden while the camera is
+ * within KICKER_NEAR_CAMERA of them, or while they stand between the camera
+ * and the ball within KICKER_SIGHT_HALFWIDTH of the sight line (horizontal), m.
+ */
+export const KICKER_NEAR_CAMERA = 2.6;
+export const KICKER_SIGHT_HALFWIDTH = 1.2;
+
+/** True if a kicker at (kx, kz) would block the camera's view of the ball (all horizontal). */
+export function kickerBlocksView(cx: number, cz: number, bx: number, bz: number, kx: number, kz: number): boolean {
+  const kdx = kx - cx;
+  const kdz = kz - cz;
+  if (kdx * kdx + kdz * kdz < KICKER_NEAR_CAMERA * KICKER_NEAR_CAMERA) return true;
+  const ldx = bx - cx;
+  const ldz = bz - cz;
+  const l2 = ldx * ldx + ldz * ldz;
+  if (l2 < 1e-9) return false;
+  const s = (kdx * ldx + kdz * ldz) / l2;
+  if (s <= 0 || s >= 1) return false;
+  const px = kdx - s * ldx;
+  const pz = kdz - s * ldz;
+  return px * px + pz * pz < KICKER_SIGHT_HALFWIDTH * KICKER_SIGHT_HALFWIDTH;
+}
 
 export type FlowPhase = 'idle' | 'aim' | 'windup' | 'playback' | 'hold' | 'transition';
 
@@ -157,8 +182,6 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     pending = null;
     const kickerId = kickerIdOf(turn?.origin);
     if (kickerId !== null) players.setYaw(kickerId, res.input.yaw);
-    players.setHidden(null);
-    kickerHidden = false;
     ball.resetRotation();
     pb = new KickPlayback(res, {
       onEvent: (ev) => opts.onEvent?.(ev, res),
@@ -171,8 +194,22 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       pcam = createPlaybackCamera(cam, opts.pitch, camMode);
       pcam.start(res.start, kickYaw, kickHeight);
     }
+    kickerHidden = kickerId !== null;
+    players.setHidden(kickerId);
+    updateKickerVisibility();
     timer = 0;
     setPhase('playback');
+  }
+
+  /** Playback: hide the kicker only while they would block the view of the ball. */
+  function updateKickerVisibility(): void {
+    const k = turn?.origin;
+    const cam = camera();
+    if (k?.kind !== 'player' || !cam || !pb) return;
+    const near = kickerBlocksView(cam.position.x, cam.position.z, pb.pos.x, pb.pos.z, k.x, k.z);
+    if (near === kickerHidden) return;
+    kickerHidden = near;
+    players.setHidden(near ? k.playerId : null);
   }
 
   function frame(dt: number): void {
@@ -204,6 +241,7 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
         const simDt = pb.update(dt, { fastForward });
         pb.applyTo(ball, simDt);
         pcam?.update(dt, pb.pos, pb.vel);
+        updateKickerVisibility();
         if (phase === 'playback' && pb.done) {
           timer = 0;
           setPhase('hold');
