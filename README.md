@@ -69,6 +69,7 @@ Flags go in the query string before the hash, e.g. `http://localhost:5173/?debug
 - `?seed=N`: deterministic random seed
 - `?autoplace`: auto-fill a legal draft (hot-seat and the online host)
 - `?touch`: show the touch button row on a mouse device (phones and tablets get it automatically)
+- `?perf=low|high`: force performance mode on or off (default: phones, tablets and weak devices start in low; any device drops to low if the frame rate stays under ~30 fps)
 - `?shot=N` / `?place=N`: shot / placement timer in seconds (0 = off; hot-seat and the online host)
 
 ### Deploying

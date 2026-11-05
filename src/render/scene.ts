@@ -1,6 +1,7 @@
 // Three.js stage: one renderer, scene and active camera for the whole app,
 // plus resize handling and the render loop. PLAN §3.2, M0.3.
 import * as THREE from 'three';
+import { FrameWatchdog, profileFor, type QualityLevel, type QualityProfile } from './quality';
 
 export type FrameCallback = (dt: number, time: number) => void;
 
@@ -16,16 +17,29 @@ export interface Stage {
   /** Runs after each resize with the new CSS pixel size. */
   onResize(cb: (w: number, h: number) => void): () => void;
   size(): { width: number; height: number };
+  /** The active quality profile (M16.3). It only ever drops, high → low. */
+  readonly quality: QualityProfile;
+  /** Drops to the cheaper profile now: pixel ratio first, then the listeners (shadow map …). No-op when already there. */
+  setQuality(level: QualityLevel): void;
+  /** Runs when the quality level changes. Returns an unsubscribe function. */
+  onQuality(cb: (q: QualityProfile) => void): () => void;
   dispose(): void;
 }
 
-const MAX_DPR = 2;
+export interface StageOptions {
+  /** Starting level (default high). */
+  quality?: QualityLevel;
+  /** Watch the frame rate and drop to low when it stays under ~30 fps (default true). */
+  autoDowngrade?: boolean;
+}
+
 /** Clamp per-frame dt so a backgrounded tab doesn't produce a giant step. */
 const MAX_FRAME_DT = 0.1;
 
-export function createStage(container: HTMLElement): Stage {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
+export function createStage(container: HTMLElement, opts: StageOptions = {}): Stage {
+  let quality = profileFor(opts.quality ?? 'high');
+  const renderer = new THREE.WebGLRenderer({ antialias: quality.antialias, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.maxDpr));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -42,6 +56,7 @@ export function createStage(container: HTMLElement): Stage {
   let camera: THREE.PerspectiveCamera | THREE.OrthographicCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
 
   const frameCbs = new Set<FrameCallback>();
+  const qualityCbs = new Set<(q: QualityProfile) => void>();
   const resizeCbs = new Set<(w: number, h: number) => void>();
 
   let width = 1;
@@ -57,7 +72,7 @@ export function createStage(container: HTMLElement): Stage {
   function resize(): void {
     width = Math.max(1, container.clientWidth);
     height = Math.max(1, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.maxDpr));
     renderer.setSize(width, height, false);
     applyCameraAspect();
     for (const cb of resizeCbs) cb(width, height);
@@ -71,10 +86,24 @@ export function createStage(container: HTMLElement): Stage {
   timer.connect(document);
   let running = true;
 
+  function setQuality(level: QualityLevel): void {
+    // Only downgrades: the cheaper profile is never swapped back out mid-session.
+    if (level === quality.level || level === 'high') return;
+    quality = profileFor(level);
+    resize();
+    for (const cb of qualityCbs) cb(quality);
+  }
+  const watchdog = opts.autoDowngrade === false || quality.level === 'low' ? null : new FrameWatchdog();
+
   renderer.setAnimationLoop((now: number) => {
     if (!running) return;
     timer.update(now);
-    const dt = Math.min(timer.getDelta(), MAX_FRAME_DT);
+    const rawDt = timer.getDelta();
+    const dt = Math.min(rawDt, MAX_FRAME_DT);
+    if (watchdog && !document.hidden && watchdog.push(rawDt)) {
+      console.info('Footy: frame rate is low, switching to performance mode.');
+      setQuality('low');
+    }
     const t = timer.getElapsed();
     for (const cb of frameCbs) cb(dt, t);
     renderer.render(scene, camera);
@@ -100,6 +129,14 @@ export function createStage(container: HTMLElement): Stage {
       return () => resizeCbs.delete(cb);
     },
     size: () => ({ width, height }),
+    get quality() {
+      return quality;
+    },
+    setQuality,
+    onQuality(cb) {
+      qualityCbs.add(cb);
+      return () => qualityCbs.delete(cb);
+    },
     dispose() {
       running = false;
       renderer.setAnimationLoop(null);

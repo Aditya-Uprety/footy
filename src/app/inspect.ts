@@ -9,7 +9,7 @@ import { createCameraTween, INSPECT_KEYS, inspectPose, type CameraPose, type Ins
 import { createAxes, createRuler } from '../render/debug';
 import { createGoalsView } from '../render/goals';
 import { createPitchView } from '../render/pitch';
-import { createStadiumView } from '../render/stadium';
+import { createStadiumView, type StadiumView } from '../render/stadium';
 import { createEnvironment, type Stage } from '../render/scene';
 import type { Pitch } from '../shared/pitch';
 
@@ -51,10 +51,25 @@ export function typingInField(ev: KeyboardEvent): boolean {
 export const INSPECT_FOV = 50;
 
 export function createInspectView(stage: Stage, pitch: Pitch, opts: InspectOptions): InspectView {
-  const env = createEnvironment(stage.scene, pitch);
+  const env = createEnvironment(stage.scene, pitch, { shadowMapSize: stage.quality.shadowMapSize });
   const pitchView = createPitchView(pitch, stage.renderer.capabilities.getMaxAnisotropy());
   const goals = createGoalsView(pitch);
-  const stadium = createStadiumView(pitch, { maxAnisotropy: stage.renderer.capabilities.getMaxAnisotropy() });
+  const buildStadium = (): StadiumView =>
+    createStadiumView(pitch, {
+      maxAnisotropy: stage.renderer.capabilities.getMaxAnisotropy(),
+      crowdDensity: stage.quality.crowdDensity,
+    });
+  let stadium = buildStadium();
+  // Performance mode kicking in mid-session (M16.3): a smaller shadow map and a thinner crowd.
+  const offQuality = stage.onQuality((q) => {
+    env.sun.shadow.map?.dispose();
+    env.sun.shadow.map = null;
+    env.sun.shadow.mapSize.set(q.shadowMapSize, q.shadowMapSize);
+    stage.scene.remove(stadium.group);
+    stadium.dispose();
+    stadium = buildStadium();
+    stage.scene.add(stadium.group);
+  });
   const ball = createBallView();
   ball.setPosition(0, PHYS.BALL_R, 0);
   stage.scene.add(pitchView.group, goals.group, stadium.group, ball.group);
@@ -139,6 +154,7 @@ export function createInspectView(stage: Stage, pitch: Pitch, opts: InspectOptio
     dispose() {
       window.removeEventListener('keydown', onKey);
       offFrame();
+      offQuality();
       controls.dispose();
       for (const d of debugAids) d.dispose();
       ball.dispose();

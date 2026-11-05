@@ -24,7 +24,7 @@ export function createFpsCounter(stage: Stage, parent: HTMLElement): FpsCounter 
       const fps = Math.round(frames / acc);
       // info.render reflects the previous frame (autoReset clears it before each render).
       const calls = stage.renderer.info.render.calls;
-      el.textContent = `FPS ${fps} · draw calls ${calls}`;
+      el.textContent = `FPS ${fps} · draw calls ${calls} · ${stage.quality.level}`;
       frames = 0;
       acc = 0;
     }

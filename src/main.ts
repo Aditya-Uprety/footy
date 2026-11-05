@@ -10,6 +10,7 @@ import { createPracticeView } from './app/practice';
 import { flagSettings, getFlags, routeToHash, startRouter, type Route } from './app/router';
 import { DEFAULT_SETTINGS } from './game/settings';
 import { createFpsCounter } from './render/debug';
+import { detectQuality, readDevice } from './render/quality';
 import { createStage, type Stage } from './render/scene';
 import { derivePitch } from './shared/pitch';
 import { clear, h } from './ui/dom';
@@ -42,7 +43,8 @@ createRotatePrompt(uiEl, { touchFlag: flags.touch });
 
 function tryCreateStage(): Stage | null {
   try {
-    return createStage(stageEl);
+    // Performance mode (M16.3): phones, tablets and weak devices start in "low"; ?perf=low|high forces it.
+    return createStage(stageEl, { quality: detectQuality(readDevice(), flags.perf), autoDowngrade: flags.perf === null });
   } catch (err) {
     console.warn('Footy: WebGL is not available.', err);
     uiEl.append(

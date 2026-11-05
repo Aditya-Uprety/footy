@@ -1,5 +1,6 @@
 // Hash router (PLAN §3.3) and query flags (parsed once at boot).
 // parseRoute / parseFlags are pure; startRouter wires them to window.
+import { parsePerfFlag, type QualityLevel } from '../render/quality';
 
 export type Route =
   | { name: 'menu' }
@@ -25,6 +26,8 @@ export interface Flags {
   place: number | null;
   /** ?touch: show the touch controls even on a device with a mouse (M16.1, for testing). */
   touch: boolean;
+  /** ?perf=low|high: force the quality level (default: detected, M16.3). */
+  perf: QualityLevel | null;
 }
 
 /** Room-code alphabet (PLAN §8.1): no I, O, 0, 1. */
@@ -100,6 +103,7 @@ export function parseFlags(search: string, hash = ''): Flags {
     shot: num(params.get('shot')),
     place: num(params.get('place')),
     touch: params.has('touch') && truthy(params.get('touch')),
+    perf: parsePerfFlag(params.get('perf')),
   };
 }
 
