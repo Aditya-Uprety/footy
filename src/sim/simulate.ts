@@ -59,7 +59,7 @@ class FrameRecorder {
 
 /** A goal-line or touchline crossing found by `detectLines`. */
 export type LineCrossing =
-  | { kind: 'goal'; goalOf: Team; f: number }
+  | { kind: 'goal'; goalOf: Team; z: number; f: number }
   | { kind: 'out'; line: 'touch' | 'goal'; x: number; z: number; f: number };
 
 /**
@@ -82,7 +82,7 @@ export function detectLines(lines: WorldLines, p0: Vec3, p: Vec3, r: number): Li
     const azc = zc < 0 ? -zc : zc;
     best =
       azc < lines.goalHalfWidth && yc < lines.goalHeight
-        ? { kind: 'goal', goalOf: side > 0 ? 1 : 0, f }
+        ? { kind: 'goal', goalOf: side > 0 ? 1 : 0, z: zc, f }
         : { kind: 'out', line: 'goal', x: side * lines.halfLength, z: zc, f };
   }
 
@@ -235,7 +235,7 @@ export function simulateKick(opts: SimulateOptions): KickResult {
       const { lastTouch, touches } = run;
       if (cross.kind === 'goal') {
         events.push({ kind: 'goal', t: run.t, goalOf: cross.goalOf });
-        outcome = { kind: 'goal', goalOf: cross.goalOf, lastTouch, touches };
+        outcome = { kind: 'goal', goalOf: cross.goalOf, z: cross.z, lastTouch, touches };
         tailTime = c.TAIL_GOAL;
       } else {
         events.push({ kind: 'out', t: run.t, line: cross.line, x: cross.x, z: cross.z });

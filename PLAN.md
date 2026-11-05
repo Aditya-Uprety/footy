@@ -420,7 +420,7 @@ interface Possession { team: Team; kicker: Kicker; restart: RestartKind }
 interface KickInput { yaw: number; power: number; curve: number; loft: number }
 interface Touch { team: Team; playerId: number | null }
 type Outcome =
-  | { kind: 'goal'; goalOf: Team; lastTouch: Touch; touches: number }
+  | { kind: 'goal'; goalOf: Team; z: number; lastTouch: Touch; touches: number }   // z = goal-line crossing
   | { kind: 'out'; line: 'touch' | 'goal'; x: number; z: number; lastTouch: Touch; touches: number }
   | { kind: 'catch'; keeperId: number }
   | { kind: 'stop'; x: number; z: number; lastTouch: Touch; touches: number };
@@ -787,3 +787,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 - 2026-11-05 — M3: `simulateKick` takes an optional `world` (from `buildWorld(pitch, players, kicker)`); without it the ball flies over the empty plane with no lines (M2 tests, sim:table). Contacts count as touches/events only when the ball is approaching the obstacle (vn < 0); a net contact also damps spin by NET_TANGENT_KEEP. Possession tie rule implemented as: players within 0.01 m of the closest distance are tied → the non-kicking team's players win → then the lowest id. No constants changed.
 - 2026-11-05 — M4: the Lab reuses the inspect view (pitch, goals, ball, orbit + keys 1–4), which gained `suspend()`/`resume()` so playback cameras can borrow the camera. Playback-camera switches (C) are a 0.9 s eased blend between continuously tracking rigs. `aimPose` (§6.1) landed in `render/cameras.ts` early for the chase start. lil-gui pinned at 0.21.0 and lazy-loaded (separate chunk). The Lab exposes `window.__lab` for scripted checks. No constants changed.
 - 2026-11-05 — M5: added `app/kickFlow.ts` (turn cycle shared by practice and the match views; `requestKick` → `play(result)` is async-ready for online) and `app/practiceRules.ts` (pure practice layout + next kicker) to §4. `shared/rng.ts` (mulberry32) was written in M5.5 for the practice layout (M6.1 builds on it). Aim drag convention: drag right turns right, drag up looks up. While the hold-Tab map is open, the kick side bar, HUD and minimap are hidden. During playback the kicker's figure stays hidden while it stands between the camera and the ball (the chase camera starts right behind it). Practice outs and goals restart with a center kickoff by the conceding team / the team that didn't touch last. No constants changed.
+- 2026-11-05 — M6: the goal `Outcome` also carries `z` (where the ball crossed the goal line), so a throw-in straight into the thrower's own goal gives the corner on the correct side (§2.6.1). `GameState.last` also records the kicking `team` and `disallowed` (throw-in goal that didn't count) for the HUD toasts.

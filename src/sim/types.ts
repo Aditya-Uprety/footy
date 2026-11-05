@@ -49,7 +49,8 @@ export interface Touch {
 }
 
 export type Outcome =
-  | { kind: 'goal'; goalOf: Team; lastTouch: Touch; touches: number }
+  /** z = where the ball crossed the goal line (picks the corner for a throw-in own goal, §2.6.1). */
+  | { kind: 'goal'; goalOf: Team; z: number; lastTouch: Touch; touches: number }
   | { kind: 'out'; line: 'touch' | 'goal'; x: number; z: number; lastTouch: Touch; touches: number }
   | { kind: 'catch'; keeperId: number }
   | { kind: 'stop'; x: number; z: number; lastTouch: Touch; touches: number };

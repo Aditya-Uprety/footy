@@ -65,7 +65,7 @@ describe('next practice turn', () => {
   });
 
   it('goals and outs reset to a center kickoff', () => {
-    const g = nextPracticeTurn(pitch, ps, 0, { kind: 'goal', goalOf: 1, lastTouch: touch(0), touches: 0 });
+    const g = nextPracticeTurn(pitch, ps, 0, { kind: 'goal', goalOf: 1, z: 0, lastTouch: touch(0), touches: 0 });
     expect(g.origin).toMatchObject({ kind: 'ghost', x: 0, z: 0 });
     expect(g.team).toBe(1); // conceding team kicks off
     expect(Math.cos(g.yaw)).toBeCloseTo(-1, 12);

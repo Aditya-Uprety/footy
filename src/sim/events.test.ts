@@ -133,7 +133,8 @@ describe('goals, outs and tails (§5.8)', () => {
   it('a straight shot is a GOAL for the defending team’s goal; the ball stays in the net during the tail', () => {
     for (const power of [0.6, 1]) {
       const res = shoot({ origin: ghost(40, r, 0), yaw: 0, power, loftDeg: power === 1 ? 5 : 0 });
-      expect(res.outcome).toEqual({ kind: 'goal', goalOf: 1, lastTouch: { team: 0, playerId: null }, touches: 0 });
+      expect(res.outcome).toMatchObject({ kind: 'goal', goalOf: 1, lastTouch: { team: 0, playerId: null }, touches: 0 });
+      expect(Math.abs((res.outcome as { z: number }).z)).toBeLessThan(1e-9);
       const goal = ofKind(res, 'goal')[0]!;
       expect(goal.goalOf).toBe(1);
       // Tail: visual only, about TAIL_GOAL long, with net contacts marked as tail.
