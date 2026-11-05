@@ -42,7 +42,7 @@
 - [x] M3.2 `collide.ts` (player, capsule, net rect, response, kicker grace)
 - [x] M3.3 Goal/out/catch events, last touch, tails
 - [x] M3.4 `game/possession.ts` (closest player + tie rule)
-- [ ] M3.5 Collision + event tests
+- [x] M3.5 Collision + event tests
 - [ ] M3.A Acceptance checks passed and reported to the user
 
 ## M4 — Playback renderer and Physics Lab · Opus 5.5 High
