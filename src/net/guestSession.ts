@@ -43,19 +43,31 @@ export interface GuestSessionOptions {
 export class GuestSession implements Session {
   readonly kind = 'guest' as const;
   readonly localSeats: readonly Seat[] = Object.freeze([GUEST_SEAT]);
-  readonly link: GuestLink;
+  private _link: GuestLink;
   private s: GameState | null = null;
   private readonly rng: Rng;
   private readonly stateCbs = new Set<(s: GameState) => void>();
   private readonly kickCbs = new Set<(k: SessionKick) => void>();
   private readonly deniedCbs = new Set<(d: Denial) => void>();
   private readonly aimCbs = new Set<(a: SessionAim) => void>();
-  private readonly off: () => void;
+  private off: () => void;
   private disposed = false;
 
   constructor(link: GuestLink, opts: GuestSessionOptions = {}) {
-    this.link = link;
+    this._link = link;
     this.rng = createRng(opts.seed ?? Math.floor(Math.random() * 0x7fffffff));
+    this.off = link.onMessage((m) => this.receive(m));
+  }
+
+  get link(): GuestLink {
+    return this._link;
+  }
+
+  /** Continues on a new link after a reconnect (the host re-sends the state on resume). */
+  attach(link: GuestLink): void {
+    if (this.disposed || link === this._link) return;
+    this.off();
+    this._link = link;
     this.off = link.onMessage((m) => this.receive(m));
   }
 

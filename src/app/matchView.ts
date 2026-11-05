@@ -13,7 +13,7 @@ import { PerspectiveCamera } from 'three';
 import { derivePitch } from '../shared/pitch';
 import { placementPose } from '../render/cameras';
 import type { Stage } from '../render/scene';
-import { activeSeat } from '../game/rules';
+import { activeSeat, teamOfSeat } from '../game/rules';
 import type { GameState, Phase, Seat } from '../game/types';
 import { h } from '../ui/dom';
 import { createFullTimeScreen } from '../ui/screens';
@@ -95,7 +95,16 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
       case 'play':
         view =
           stage && world && players
-            ? createPlayView({ stage, world, players, session, overlay, state: s, onApplied: (next) => applied(next) })
+            ? createPlayView({
+                stage,
+                world,
+                players,
+                session,
+                overlay,
+                state: s,
+                onApplied: (next) => applied(next),
+                orientation: mapOrientation(s),
+              })
             : needsWebGl();
         break;
       case 'fulltime':
@@ -128,6 +137,12 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
     if (!w || view?.busy) return;
     waiting = null;
     if (w.rev > shown.rev) queueMicrotask(() => show(w));
+  }
+
+  /** §6.1: hot-seat, Team A attacks left → right; online, your own team does. */
+  function mapOrientation(s: GameState): 1 | -1 {
+    if (session.localSeats.length !== 1) return 1;
+    return teamOfSeat(s, session.localSeats[0]!) === 1 ? -1 : 1;
   }
 
   function tossView(s: GameState): PhaseView {

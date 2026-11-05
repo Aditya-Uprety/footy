@@ -14,6 +14,7 @@ import { defaultYaw } from '../game/host';
 import { activeSeat, kickCaps, kickOrigin } from '../game/rules';
 import { otherTeam, type GameState } from '../game/types';
 import { mapContent } from '../render/overheadMap';
+import type { MapOrientation } from '../render/overheadMap';
 import type { PlayersView } from '../render/players';
 import type { Stage } from '../render/scene';
 import { createHud } from '../ui/hud';
@@ -46,6 +47,8 @@ export interface PlayViewOptions {
   state: GameState;
   /** A kick's next state is now shown (after its playback). */
   onApplied(next: GameState): void;
+  /** Map orientation (§6.1): hot-seat 1; online, your own team attacks left → right. */
+  orientation?: MapOrientation;
 }
 
 export interface PlayView {
@@ -77,6 +80,12 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
   const queue: SessionKick[] = [];
   /** The next kick request comes from the shot timer. */
   let autoNext = false;
+  /** Online: the device plays one seat; the other seat's turns are watched (§6.1 spectator). */
+  const online = session.localSeats.length < 2;
+  const isLocalTurn = (s: GameState): boolean => {
+    const seat = activeSeat(s);
+    return seat !== null && session.localSeats.includes(seat);
+  };
   let halftime: ReturnType<typeof createHalfTimeOverlay> | null = null;
 
   const flow = createKickFlow({
@@ -92,7 +101,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
       const auto = autoNext;
       autoNext = false;
       const seat = activeSeat(shown);
-      if (seat === null) return;
+      if (seat === null || !session.localSeats.includes(seat)) return;
       // LocalSession answers synchronously through onKick → kick() below.
       session.send(seat, { type: 'kick', turnId: shown.turnId, input, auto });
     },
@@ -102,7 +111,8 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     },
     onPlaybackEnd: () => finishKick(),
     onPhase(p) {
-      if (p === 'aim') timer.start();
+      // The shot timer runs on the kicker's device only (§8.4).
+      if (p === 'aim' && !flow.spectating) timer.start();
       else timer.stop();
       render();
     },
@@ -117,7 +127,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
   function beginTurn(instant = false): void {
     const t = turnOf(shown);
     if (!t) return;
-    flow.startTurn(t, { instant });
+    flow.startTurn(t, { instant, spectate: !isLocalTurn(shown) });
     render();
   }
 
@@ -142,7 +152,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     if (queued) {
       // Already kicked while we watched: jump to that turn and play it.
       const turn = turnOf(shown);
-      if (turn) flow.startTurn(turn, { instant: true });
+      if (turn) flow.startTurn(turn, { instant: true, spectate: !isLocalTurn(shown) });
       play(queued);
       return;
     }
@@ -163,7 +173,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
       },
     });
     opts.overlay.append(halftime.el);
-    panel.el.hidden = true;
+    syncPanel();
     maps.setMinimapHidden(true);
     render();
   }
@@ -174,12 +184,18 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     halftime = null;
     // Disposed after the current event (it may be the overlay's own click/key handler).
     queueMicrotask(() => ht.dispose());
-    panel.el.hidden = maps.shown;
+    syncPanel();
     maps.setMinimapHidden(false);
+  }
+
+  /** The kick bar hides under the map, the half-time card, and while watching the other seat (online). */
+  function syncPanel(mapOpen = maps.shown): void {
+    panel.el.hidden = mapOpen || halftime !== null || flow.spectating;
   }
 
   // ---- HUD -----------------------------------------------------------------
   function render(): void {
+    syncPanel();
     hud.setScore({
       names: [seatNameOf(shown, 0), seatNameOf(shown, 1)],
       kits: [TEAM_KIT[0], TEAM_KIT[1]],
@@ -192,8 +208,9 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     } else {
       const ph = flow.phase;
       const inPlay = ph === 'windup' || ph === 'playback' || ph === 'hold' || playing !== null;
-      const name = seatNameOf(shown, p.team);
-      hud.setPossession({ team: p.team, text: possessionText(shown, p), sub: inPlay ? 'Ball in play…' : `${name || TEAM_KIT[p.team]} to kick` });
+      const name = seatNameOf(shown, p.team) || TEAM_KIT[p.team];
+      const sub = inPlay ? 'Ball in play…' : !online ? `${name} to kick` : isLocalTurn(shown) ? 'Your kick' : `Watching ${name}…`;
+      hud.setPossession({ team: p.team, text: possessionText(shown, p), sub });
     }
     renderTimer();
   }
@@ -210,8 +227,8 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     stage,
     pitch,
     overlay: opts.overlay,
-    // Hot-seat: Team A attacks left → right (§6.1). Online (M10) flips it for Team B.
-    orientation: 1,
+    // Hot-seat: Team A attacks left → right (§6.1). Online: flipped for Team B.
+    orientation: opts.orientation ?? 1,
     ball: world.ball,
     content: () => {
       const pb = flow.playback;
@@ -219,7 +236,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     },
     ballOnMap,
     onShow: (on) => {
-      panel.el.hidden = on || halftime !== null;
+      syncPanel(on);
       hud.setHidden(on);
     },
   });

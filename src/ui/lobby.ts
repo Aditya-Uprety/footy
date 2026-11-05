@@ -68,7 +68,7 @@ export function createHostLobby(o: HostLobbyOptions): HostLobby {
   const errorEl = h('p', { class: 'lobby-error', hidden: true }, '');
   const retryBtn = h('button', { type: 'button', class: 'btn', hidden: true }, 'Retry');
   const startBtn = h('button', { type: 'button', class: 'btn btn-primary', disabled: true }, 'Start match');
-  const startNote = h('p', { class: 'lobby-note' }, 'The online match itself arrives in the next update (M10).');
+  const startNote = h('p', { class: 'lobby-note' }, 'Start once your opponent has joined.');
 
   copyBtn.addEventListener('click', () => {
     const link = linkEl.value;
@@ -186,7 +186,7 @@ export function createJoinLobby(o: JoinLobbyOptions): JoinLobby {
   const errorEl = h('p', { class: 'lobby-error', hidden: true }, '');
   const joinBtn = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Join');
   const leaveBtn = h('button', { type: 'button', class: 'btn', hidden: true }, 'Leave');
-  const note = h('p', { class: 'lobby-note', hidden: true }, 'Waiting for the host to start. The online match itself arrives in the next update (M10).');
+  const note = h('p', { class: 'lobby-note', hidden: true }, 'Waiting for the host to start the match…');
   leaveBtn.addEventListener('click', () => o.onLeave());
 
   const form = h(

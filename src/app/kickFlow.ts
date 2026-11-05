@@ -109,8 +109,10 @@ export interface KickFlow {
   readonly turn: Turn | null;
   readonly playback: KickPlayback | null;
   readonly camMode: PlaybackCamMode;
-  /** Begins a turn: eases the camera to the kicker (or jumps there if `instant`). */
-  startTurn(turn: Turn, opts?: { instant?: boolean }): void;
+  /** True while the turn belongs to the other seat (online): the view follows, the controls stay off. */
+  readonly spectating: boolean;
+  /** Begins a turn: eases the camera to the kicker (or jumps there if `instant`); `spectate` = someone else kicks. */
+  startTurn(turn: Turn, opts?: { instant?: boolean; spectate?: boolean }): void;
   /** Starts the wind-up (same as KICK / Space). Ignored outside the aim phase. */
   kick(): boolean;
   /** Plays a kick result (after the wind-up if it is still running). */
@@ -150,6 +152,7 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
   let tFromFov = 60;
   let tToFov = 60;
   let kickerHidden = false;
+  let spectating = false;
 
   function setPhase(p: FlowPhase): void {
     if (phase === p) return;
@@ -166,9 +169,9 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     kickerHidden = true;
     players.setHidden(kickerIdOf(turn?.origin));
     aim.active = true;
-    aim.inputEnabled = true;
+    aim.inputEnabled = !spectating;
     panel.setCaps(turn?.caps ?? {});
-    panel.setEnabled(true);
+    panel.setEnabled(!spectating);
     setPhase('aim');
   }
 
@@ -215,7 +218,7 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
   function frame(dt: number): void {
     switch (phase) {
       case 'aim':
-        panel.update(dt);
+        if (!spectating) panel.update(dt);
         break;
       case 'windup': {
         timer += dt;
@@ -322,9 +325,13 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     get camMode() {
       return camMode;
     },
+    get spectating() {
+      return spectating;
+    },
     startTurn(next, o = {}) {
       const cam = camera();
       turn = next;
+      spectating = o.spectate === true;
       pending = null;
       aim.active = false;
       aim.inputEnabled = false;
@@ -353,7 +360,7 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       setPhase('transition');
     },
     kick() {
-      if (phase !== 'aim' || !turn) return false;
+      if (phase !== 'aim' || !turn || spectating) return false;
       const input = panel.input(aim.state.yaw);
       kickYaw = input.yaw;
       kickHeight = aim.state.height;

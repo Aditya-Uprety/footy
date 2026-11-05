@@ -70,6 +70,8 @@ function ensureMode(kind: ModeKind, route: Route): void {
       role: route.name,
       code: route.name === 'join' ? route.code : null,
       debug: flags.debug,
+      seed: flags.seed,
+      autoplace: flags.autoplace,
       overlay: screenEl,
     });
     mode = { kind, key, inspect: null, dispose: () => m.dispose() };
