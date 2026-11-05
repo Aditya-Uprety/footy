@@ -169,6 +169,12 @@ export function createOverheadMap(stage: Stage, pitch: Pitch, orientation: MapOr
     }
   }
 
+  /** The stands and crowd would show at the map's edges: keep it a clean, positions-only view. */
+  function setStadiumVisible(on: boolean): void {
+    const stadium = stage.scene.getObjectByName('stadium');
+    if (stadium) stadium.visible = on;
+  }
+
   let shown = false;
   let prevCamera: Stage['camera'] | null = null;
 
@@ -185,6 +191,7 @@ export function createOverheadMap(stage: Stage, pitch: Pitch, orientation: MapOr
       prevCamera = stage.camera;
       stage.setCamera(camera);
       group.visible = true;
+      setStadiumVisible(false);
     },
     update(content) {
       if (shown) draw(content);
@@ -193,6 +200,7 @@ export function createOverheadMap(stage: Stage, pitch: Pitch, orientation: MapOr
       if (!shown) return;
       shown = false;
       group.visible = false;
+      setStadiumVisible(true);
       if (prevCamera) stage.setCamera(prevCamera);
       prevCamera = null;
     },
