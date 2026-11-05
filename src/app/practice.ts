@@ -7,7 +7,7 @@
 // overhead map + minimap (M5.4). No aim aids anywhere (CLAUDE.md).
 import * as THREE from 'three';
 import { DEFAULT_SETTINGS } from '../game/settings';
-import { createOverheadMap, mapContent, type MapContent } from '../render/overheadMap';
+import { mapContent, type MapContent } from '../render/overheadMap';
 import { createPlayersView, type PlayersView } from '../render/players';
 import type { Stage } from '../render/scene';
 import type { Pitch } from '../shared/pitch';
@@ -17,9 +17,9 @@ import type { KickResult, Outcome, SimEvent, Team } from '../sim/types';
 import { buildWorld } from '../sim/world';
 import { h } from '../ui/dom';
 import { createKickPanel } from '../ui/kickPanel';
-import { createMinimap } from '../ui/minimap';
 import { createAimController } from './aimController';
-import { createInspectView, typingInField } from './inspect';
+import { createInspectView } from './inspect';
+import { createMapControls } from './mapControls';
 import { createKickFlow, type FlowPhase } from './kickFlow';
 import { kickoffTurn, nextPracticeTurn, practiceLayout, type PracticePlayer, type PracticeTurn } from './practiceRules';
 
@@ -190,48 +190,27 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
   }
 
   // ---- maps (M5.4): positions only; no ball while aiming -------------------
-  const overhead = createOverheadMap(stage, pitch, 1);
-  const minimap = createMinimap(pitch, 1);
-  const mapHint = h('div', { class: 'map-hint', hidden: true }, 'MAP · release Tab');
-  opts.overlay.append(hud.root, panel.el, minimap.el, mapHint, toastEl);
+  opts.overlay.append(hud.root, panel.el, toastEl);
   const ballOnMap = (): boolean => flow.phase === 'playback' || flow.phase === 'hold';
   function content(): MapContent {
     const pb = flow.playback;
     return mapContent(players, flow.turn?.origin ?? null, ballOnMap() && pb ? pb.pos : null);
   }
-  function showMap(on: boolean): void {
-    if (on === overhead.shown) return;
-    if (on) overhead.show(content());
-    else overhead.hide();
-    mapHint.hidden = !on;
-    // The full-screen map needs the room: the side bar, HUD and minimap step aside.
-    panel.el.hidden = on;
-    minimap.el.hidden = on;
-    hud.root.hidden = on;
-    world.ball.setVisible(!on || ballOnMap());
-  }
-  const onKeyDown = (ev: KeyboardEvent): void => {
-    if (ev.key !== 'Tab' || ev.ctrlKey || ev.metaKey || ev.altKey || typingInField(ev)) return;
-    ev.preventDefault();
-    showMap(true);
-  };
-  const onKeyUp = (ev: KeyboardEvent): void => {
-    if (ev.key === 'Tab') showMap(false);
-  };
-  const onBlur = (): void => showMap(false);
-  window.addEventListener('keydown', onKeyDown);
-  window.addEventListener('keyup', onKeyUp);
-  window.addEventListener('blur', onBlur);
-  let lastPhase = flow.phase;
-  const offFrame = stage.onFrame(() => {
-    const c = content();
-    minimap.draw(c);
-    if (overhead.shown && (ballOnMap() || lastPhase !== flow.phase)) {
-      overhead.update(c);
-      world.ball.setVisible(ballOnMap());
-    }
-    lastPhase = flow.phase;
+  const maps = createMapControls({
+    stage,
+    pitch,
+    overlay: opts.overlay,
+    orientation: 1,
+    ball: world.ball,
+    content,
+    ballOnMap,
+    // The full-screen map needs the room: the side bar and HUD step aside.
+    onShow: (on) => {
+      panel.el.hidden = on;
+      hud.root.hidden = on;
+    },
   });
+  const showMap = (on: boolean): void => maps.show(on);
 
   function newLayout(s = randomSeed()): void {
     layout(s);
@@ -250,7 +229,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
       aim,
       panel,
       flow,
-      overhead,
+      maps,
       showMap,
       content,
       newLayout,
@@ -278,19 +257,14 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
 
   return {
     dispose() {
-      offFrame();
       if (toastTimer) clearTimeout(toastTimer);
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
-      window.removeEventListener('blur', onBlur);
-      overhead.dispose();
-      minimap.dispose();
+      maps.dispose();
       flow.dispose();
       panel.dispose();
       aim.dispose();
       playersView.dispose();
       world.dispose();
-      for (const el of [hud.root, mapHint, toastEl]) el.remove();
+      for (const el of [hud.root, toastEl]) el.remove();
       delete (window as { __practice?: unknown }).__practice;
     },
   };

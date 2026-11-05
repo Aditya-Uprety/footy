@@ -373,6 +373,14 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
         pending = result;
         return;
       }
+      // A result nobody asked for here (host guard auto-kick, the other seat
+      // online): lock the controls and play it from the current aim height.
+      if (phase === 'aim' || phase === 'transition') {
+        kickHeight = aim.state.height;
+        aim.active = false;
+        aim.inputEnabled = false;
+        panel.setEnabled(false);
+      }
       kickYaw = result.input.yaw;
       startPlayback(result);
     },

@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M8 — Hot-seat match (M0–M7 done)
-- **Next task:** M8.1 `app/matchView.ts` phase orchestration
+- **Next task:** M8.A acceptance checks (browser pane)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M7 complete)
+- **Last updated:** 2026-11-05 (M8.1–M8.5 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -79,11 +79,11 @@
 - [x] M7.A Acceptance checks passed (browser pane) and reported to the user
 
 ## M8 — Hot-seat match · Opus 5.5 High
-- [ ] M8.1 `app/matchView.ts` phase orchestration
-- [ ] M8.2 Turn loop + ghost-taker restarts + catches
-- [ ] M8.3 Functional HUD (score, kicks, shot timer + auto-kick, banners, toasts)
-- [ ] M8.4 Half-time + full-time screens, Rematch
-- [ ] M8.5 `?autoplace` + full-match smoke test and fixes
+- [x] M8.1 `app/matchView.ts` phase orchestration
+- [x] M8.2 Turn loop + ghost-taker restarts + catches
+- [x] M8.3 Functional HUD (score, kicks, shot timer + auto-kick, banners, toasts)
+- [x] M8.4 Half-time + full-time screens, Rematch
+- [x] M8.5 `?autoplace` + full-match smoke test and fixes
 - [ ] M8.A Acceptance checks passed (browser pane) and reported to the user
 
 ## M9 — Networking and lobby · Opus 5.5 High
@@ -163,3 +163,5 @@
 - 2026-11-05 — M6.A: `npm run check` green (29 files, 258 tests); the scripted HostCore match (seed 2026, random aimed kicks) reaches full-time after 40 kicks: Team A 0 : 1 Team B (goal 1, out 2, stop 37; restarts open, kickoff, throw-in, goal kick). Run `npx vitest run src/game/host.test.ts -t scripted --reporter=verbose` to see the log line. No browser check (pure code, nothing rendered).
 - 2026-11-05 — M7 notes: `app/hotseat.ts` = the #/hotseat mode (name entry over a turning pitch → `LocalSession` → `createMatchView`; "New draft" restarts with the same names; ?seed=N gives seed N, N+1, … per restart). `app/session.ts` `Session` = `{ kind, state, localSeats, send(seat, intent), randomPick(seat), onState, onKick, onDenied, dispose }`; `LocalSession` wraps HostCore (guards ticked every 500 ms on performance.now; tests pass `tickMs: 0`). **`app/matchView.ts` already exists** (created in M7.2, not M8.1): it owns the match backdrop (inspect view from the match settings) and the confirmed `PlayersView`, and maps phases → views (toss → `ui/toss.ts`; placement → `app/placementView.ts`; play/fulltime → hand-off stub card). M8.1 extends it with the play phase instead of creating it. Phase views get `sync(state)` on every state. `app/placementModel.ts` (pure, tested) holds one pick's tentative spots + keeper toggle/forced lock; `render/placementOverlay.ts` draws no-go zones, own box, X/Y rings, player discs, hover marker. The placement camera re-maps the shared OrbitControls (left = pan, right = rotate) and restores them on dispose; `render/cameras.ts` `placementPose(pitch, aspect, fov, { polarDeg, inset })` frames the pitch left of the side panel. `game/rules.ts` gained `sanitizeName`/`defaultName`/`NAME_MAX` (newMatch sanitizes names). Scripting hooks: `window.__hotseat` (session, match) and `window.__placement` (model, `screenOf(x, z)`, `top()`). `scripts/webgl-shot.mjs` gained `move:`, `rclick:` and `js<step>:<expr>` (coordinates from JS, e.g. `jsclick:__placement.screenOf(-20,5)`). M7.3 and M7.4 were committed together (same files). Known nits: under ?debug the FPS counter overlaps the placement panel's top-right corner; the debug ruler's line is hard to see over the placement overlay (the label is fine). `?autoplace` is still M8.5 (`session.randomPick(seat)` already does the work).
 - 2026-11-05 — M7.A: verified with webgl-shot (seeds 3, 5, 11): menu → setup → toss (coin lands on the drawn winner) → role → picks; banner order Red1 Blue2 Red2 Blue2 Red2 Blue2 Red2 Blue2 Red2 Blue2 Red2 Blue1 → play; hover reasons "Too close to a line", "Inside the center circle", "Too close to a teammate (4.9 m, needs 8 m)", "Too close to an opponent (3 m, needs 4 m)", "The keeper must stand in your own penalty area"; clicks on red spots place nothing; illegal drags snap back with the reason; forced keeper locks the last slot ("Your last player must be the keeper"); ?debug ruler between two confirmed Blue players placed 9 m apart = 8.98 m; Shift+clicks don't place. The browser pane (no WebGL) shows menu, setup and toss and then a "needs WebGL" card; no console errors apart from the expected WebGL warnings.
+- 2026-11-05 — M8 notes: `app/playView.ts` runs the turn loop (aim → `intent{kick}` → `onKick` → playback → apply `next` → toast → half-time card? → next turn); `app/matchView.ts` routes `onKick` to it and switches to the full-time view only when the play view reports `next` applied (`onApplied`). States that arrive mid-playback wait (`busy`); kicks that arrive mid-playback queue (e.g. a host-guard kick while the tab slept). `kickFlow.play()` now also accepts a result while aiming (guard kick / the other seat online): it locks the controls first. Shot timer = `app/shotTimer.ts`, started on the flow's `aim` phase, auto-kick with `auto: true` at 0; ring red under 5 s. HUD texts in `app/matchText.ts` (tested). Hold-Tab map + minimap moved to `app/mapControls.ts` (practice uses it too). Scripting hook `window.__match` (flow, aim, panel, timer, maps, shown, `kickNow({yaw, power, curve, loft})`, `setFastForward`). For crafted situations in checks: `__hotseat.session.core.commit({...state, rev+1, turnId+1, possession})` (private in TS, reachable in JS). M8.1–M8.5 were written together and committed as one. Balance watch (M17): a straight 70 % rolling kickoff scored past an off-centre keeper on seed 3.
+- 2026-11-05 — M8.5 smoke test (seed 11, headless, random kicks + fast-forward): 40 kicks → full-time "Draw"; turn 1 left idle → shot timer auto-kicked (`auto: true`); throw-ins came up with power 45 / curve 0 caps; goal kicks to the keeper; half-time after kick 20 with Blue kicking off ("Kick 21/40 · 2nd half"); toasts "Out — touchline" → "Throw-in — Blue", "Out — goal line" → "Goal kick — Red"; no console errors. Crafted: a shot 14 m in front of Blue's keeper → "Saved! / Blue #1 (GK)" and "Blue #1 (GK) has the ball"; a corner ghost puts the ball at (52, −33.5) with the camera behind it; kick 40 → full-time card → Rematch → new match. No fixes were needed beyond the work itself.
