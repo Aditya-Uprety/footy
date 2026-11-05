@@ -5,10 +5,10 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M4 — Playback renderer and Physics Lab (M0–M3 done)
-- **Next task:** M4.A acceptance checks (browser pane + webgl-shot)
+- **Current milestone:** M5 — Aiming and kicking (Practice mode) (M0–M4 done)
+- **Next task:** M5.1 aim camera rig (yaw, pitch, zoom, height; kicker hidden; no crosshair)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M4.5 done)
+- **Last updated:** 2026-11-05 (M4 complete)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -51,7 +51,7 @@
 - [x] M4.3 Playback (interpolation, events, time-warp)
 - [x] M4.4 Chase + broadcast cameras (C toggles)
 - [x] M4.5 Physics Lab `#/lab` (dummies, kick inputs, event log, lil-gui constants)
-- [ ] M4.A Acceptance checks passed (browser pane) and reported to the user
+- [x] M4.A Acceptance checks passed (browser pane) and reported to the user
 
 ## M5 — Aiming and kicking (Practice mode) · Opus 5.5 High
 - [ ] M5.1 Aim camera rig (yaw, pitch, zoom, height; kicker hidden; no crosshair)
@@ -156,3 +156,4 @@
 - 2026-11-05 — Watch item (M12.4): in headless SwiftShader, lines farther than ~40 m break into dashes at grazing angles (sub-pixel width). Ask the user whether it shows on a real GPU with MSAA; if so, fade/widen distant lines or move markings to a mipmapped texture.
 - 2026-11-05 — M2 notes: §5.10 matched with the §5.3 constants unchanged (see `npm run sim:table`). `step.ts` is split into `integrate` → `collideGround` (airborne only) → `settleRolling`; M3 should insert players → frame → nets between `collideGround` and `settleRolling` in `simulate.ts`, record a frame on each contact step, and handle "a contact that leaves v.y > V_SETTLE ends rolling". `simulateKick` takes `{ input, origin: KickOrigin, team, caps?, turnId?, consts? }`; M3 adds the world/pitch argument. `kickStats().apex` = ball-center height above the ground (what §5.10 means). Hitbox sizes are `HITBOX` in `sim/constants.ts`; ghost ball spots are `kickoffSpot` / `cornerSpot` / `throwInSpot` in `sim/kick.ts`. `SimEvent` contact events carry t, x, y, z, speed (+ `tail?`).
 - 2026-11-05 — M3 notes: `simulateKick({ ..., world })` takes `buildWorld(pitch, players, kicker)`; without `world` it is the M2 empty infinite plane (no obstacles, no lines), which `sim:table` and the M2 tests still use. `World` = `hitboxes`, `frame` (6 capsules), `nets` (8 rects: back/sideL/sideR/roof per goal), `lines`, `kickerId`; any object with `{ id, team, x, z, gk }` works as a player (game `PlayerSpot` fits). Step order: integrate → ground → players (keeper ⇒ CATCH, stops at once) → frame → nets → settle → `detectLines` (exported). A contact counts as a touch/event only when the ball was approaching (vn < 0). Net contacts also damp spin by NET_TANGENT_KEEP (plan left spin open). Tail contact events carry `tail: true`; no `stop` event is emitted for goal/out results. Goal/out event `t` is the step time (not interpolated). `game/possession.ts` `closestPlayer(players, x, z, kickingTeam)`: tied set = within 0.01 m of the minimum → prefer the non-kicking team → lowest id. The kicker's ball-at-feet spot (§2.5.7) is already `kickStart` in `sim/kick.ts`.
+- 2026-11-05 — M4 notes: `app/inspect.ts` now exposes `ball`, `controls`, `pickRoots`, `suspend()` / `resume(target, fov)` so a mode can borrow the camera (the Lab does this during playback); `main.ts` swaps views per route (Lab vs the shared inspect view). `render/cameras.ts` already has `aimPose(ball, yaw, h, pitch?)`, `aimBackDistance`, `aimDefaultPitch` (ball 22° below center) and `AIM_HEIGHT_MIN/MAX` for M5.1, plus `createPlaybackCamera(camera, pitch)` (chase/broadcast; `start(ball, yaw, h)`, `toggle()`, `update(dt, ball, vel)`; C blends over 0.9 s; FOV 60 chase / 34 broadcast). `render/playback.ts` `KickPlayback(result, { onEvent, onEnd, autoSlowRolls, keeperAt, consts })`: `update(realDt, { fastForward })` returns sim dt, then `applyTo(ball, simDt)`; catch snaps the ball to `keeperHands`. `render/players.ts` `createPlayersView({ hitboxes })` with `setPlayers`, `setHidden(id)` (for the aim view), `setHitboxesVisible`, `pickTargets`/`idOf`; default facing = toward the opponent's goal. The Lab exposes `window.__lab` (addDummy, setOrigin, setInput, preset, kick, replay, toggleCamera, setFastForward, setConst, log, playback, camera) for scripted webgl-shot checks. Airborne ball rotation uses only spin0 (sidespin), so an uncurved lofted ball doesn't visibly rotate in flight: revisit in M12.
