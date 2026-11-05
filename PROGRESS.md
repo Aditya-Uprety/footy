@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M10 — Online match (M0–M9 done)
-- **Next task:** M10.6 Networked full-match integration test
+- **Next task:** M10.A Acceptance checks (two windows + two devices)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M10.5 done)
+- **Last updated:** 2026-11-05 (M10.6 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -100,7 +100,7 @@
 - [x] M10.3 Aim-yaw streaming + spectator camera
 - [x] M10.4 Shot timer + host guard + placement timer
 - [x] M10.5 Resume/reconnect, seat reservation, online rematch
-- [ ] M10.6 Networked full-match integration test
+- [x] M10.6 Networked full-match integration test
 - [ ] M10.A Acceptance checks passed (two windows + two devices) and reported to the user
 
 ## M11 — Deploy to the web · Sonnet 5.5 High
