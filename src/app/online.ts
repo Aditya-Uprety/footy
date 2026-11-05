@@ -52,6 +52,9 @@ export interface OnlineMode {
   dispose(): void;
 }
 
+/** §8.5: a dropped guest retries after 1, 2, 4, 8 … s, for up to 60 s in all. */
+export const RECONNECT_DELAYS_S: readonly number[] = Object.freeze([1, 2, 4, 8, 16, 29]);
+
 /** sessionStorage key for the resume token of a room (§8.5). */
 export function resumeKey(code: string): string {
   return `footy-resume-${code}`;
@@ -322,9 +325,44 @@ function joinMode(ctx: MatchCtx): OnlineMode {
     connect();
   }
 
-  function connect(): void {
+  // ---- automatic reconnect during a match (§8.5) ----------------------------
+  let retry: { attempt: number; timer: ReturnType<typeof setTimeout> | null } | null = null;
+
+  function clearRetry(): void {
+    if (retry?.timer) clearTimeout(retry.timer);
+    retry = null;
+  }
+
+  /** The link dropped (or a retry failed): wait for the next backoff step, then try again. */
+  function scheduleRetry(): void {
+    retry ??= { attempt: 0, timer: null };
+    const r = retry;
+    if (r.timer) clearTimeout(r.timer);
+    const delay = RECONNECT_DELAYS_S[r.attempt];
+    if (delay === undefined) {
+      clearRetry();
+      overlay.show('Connection lost', 'Could not reach the host for a minute. Your seat is kept for 2 minutes after the drop.', [
+        { label: 'Menu', onClick: toMenu },
+        { label: 'Try again', primary: true, onClick: () => connect() },
+      ]);
+      return;
+    }
+    overlay.show(
+      'Connection lost',
+      `Reconnecting… (attempt ${r.attempt + 1} of ${RECONNECT_DELAYS_S.length} in ${delay} s)`,
+      [{ label: 'Menu', onClick: toMenu }],
+    );
+    r.timer = setTimeout(() => {
+      r.timer = null;
+      r.attempt += 1;
+      connect(true);
+    }, delay * 1000);
+  }
+
+  function connect(retrying = false): void {
+    if (!retrying) clearRetry();
     link?.close();
-    overlay.hide();
+    if (!retrying) overlay.hide();
     lobby.setBusy(true);
     lobby.setHost(null);
     lobby.pill.set('wait', `Connecting to ${code}…`);
@@ -381,6 +419,7 @@ function joinMode(ctx: MatchCtx): OnlineMode {
       case 'connecting':
         return;
       case 'connected':
+        clearRetry();
         if (link?.token) writeResume(code, link.token);
         if (link) bindSession(link);
         overlay.hide();
@@ -398,11 +437,20 @@ function joinMode(ctx: MatchCtx): OnlineMode {
         );
         return;
       case 'error':
+        // Mid-match the host may just be re-registering with the server: keep trying.
+        if (match && retry) {
+          scheduleRetry();
+          return;
+        }
         fail(s.error.code === 'room-not-found' ? 'Room not found' : 'Could not connect', s.error.message);
         return;
       case 'lost':
         lobby.pill.set('bad', 'Connection lost');
         lobby.setHost(null);
+        if (match) {
+          scheduleRetry();
+          return;
+        }
         overlay.show('Connection lost', match ? 'The connection to the host dropped. Reconnect to carry on with the match.' : 'The connection to the host dropped.', [
           { label: 'Menu', onClick: toMenu },
           { label: 'Reconnect', primary: true, onClick: () => connect() },
@@ -417,6 +465,7 @@ function joinMode(ctx: MatchCtx): OnlineMode {
   }
 
   function fail(pill: string, text: string): void {
+    clearRetry();
     if (match) {
       // Mid-match: the lobby is gone, so say it on the overlay.
       link = null;
@@ -439,6 +488,7 @@ function joinMode(ctx: MatchCtx): OnlineMode {
     dispose() {
       if (disposed) return;
       disposed = true;
+      clearRetry();
       overlay.hide();
       offFirst?.();
       match?.dispose();

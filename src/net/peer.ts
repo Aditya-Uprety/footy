@@ -142,6 +142,12 @@ export class PeerTransport extends BaseTransport {
 
   send(msg: unknown): void {
     if (this.state !== 'open' || !this.conn) return;
+    // The DataConnection went away before its 'close' event reached us: PeerJS
+    // would only log an error, so end the transport here instead.
+    if (!this.conn.open) {
+      this.end({ kind: 'closed', reason: 'remote' });
+      return;
+    }
     try {
       void this.conn.send(msg);
     } catch (e) {
@@ -164,7 +170,9 @@ export class PeerTransport extends BaseTransport {
     const c = this.conn;
     this.conn = null;
     try {
-      c?.close({ flush: true });
+      // flush sends a close message, which PeerJS logs as an error on a dead connection.
+      if (c?.open) c.close({ flush: true });
+      else c?.close();
     } catch {
       /* already gone */
     }

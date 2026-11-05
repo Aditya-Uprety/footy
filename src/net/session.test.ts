@@ -5,7 +5,7 @@ import type { GameState, Seat } from '../game/types';
 import type { Denial, Session, SessionAim, SessionKick } from '../app/session';
 import { GuestSession } from './guestSession';
 import { HostSession } from './hostSession';
-import { GuestLink, HostLink } from './link';
+import { GuestLink, HostLink, RESERVE_MS, SILENCE_MS, type GuestLinkStatus } from './link';
 import { msg } from './protocol';
 import { LoopbackHub } from './transport';
 
@@ -194,5 +194,79 @@ describe('HostSession + GuestSession over LoopbackTransport', () => {
     await draft(x);
     now = 10 * 60_000;
     expect(x.host.core.tick(now)).toBe(false);
+  });
+
+  it('resume: a dropped guest comes back with its token to the same seat and state; strangers are turned away meanwhile', async () => {
+    const x = await setup();
+    x.hostLink.reserveMs = RESERVE_MS;
+    await draft(x);
+    const s = x.host.state;
+    const seat = activeSeat(s)!;
+    of(x, seat).send(seat, { type: 'kick', turnId: s.turnId, input: { yaw: 0.2, power: 0.5, curve: 0, loft: 0 }, auto: false });
+    await step();
+    const token = x.guestLink.token!;
+    (x.t as unknown as { sever(): void }).sever();
+    await step(SILENCE_MS + 2000);
+    expect(x.guestLink.status.kind).toBe('lost');
+    expect(x.hostLink.guest).toMatchObject({ connected: false });
+    // Meanwhile the host kicks (if it's its turn): the guest misses that kick.
+    const s2 = x.host.state;
+    if (activeSeat(s2) === 0) {
+      x.host.send(0, { type: 'kick', turnId: s2.turnId, input: { yaw: -0.3, power: 0.4, curve: 0, loft: 0 }, auto: false });
+    }
+    // A stranger can't take the reserved seat.
+    const stranger = new GuestLink(x.hub.connect(x.code), { name: 'Eve', clock });
+    const ss: GuestLinkStatus[] = [];
+    stranger.onStatus((st) => ss.push(st));
+    await step();
+    expect(ss.at(-1)).toEqual({ kind: 'rejected', reason: 'full' });
+    // The same session continues on a new link.
+    const link2 = new GuestLink(x.hub.connect(x.code), { name: 'Bob', clock, resume: token });
+    x.guest.attach(link2);
+    await step();
+    expect(link2.status.kind).toBe('connected');
+    expect(link2.token).toBe(token);
+    expect(x.guest.state).toEqual(x.host.state);
+    // And it can still play its turns.
+    const s3 = x.host.state;
+    const seat3 = activeSeat(s3)!;
+    of(x, seat3).send(seat3, { type: 'kick', turnId: s3.turnId, input: { yaw: 0, power: 0.5, curve: 0, loft: 0 }, auto: false });
+    await step();
+    expect(x.guest.state).toEqual(x.host.state);
+    expect(x.host.state.kicksTaken).toBeGreaterThan(s3.kicksTaken);
+  });
+
+  it('after the reservation expires a new guest may take the seat', async () => {
+    const x = await setup();
+    x.hostLink.reserveMs = RESERVE_MS;
+    await draft(x);
+    (x.t as unknown as { sever(): void }).sever();
+    await step(SILENCE_MS + RESERVE_MS + 4000);
+    const g2 = new GuestSession(new GuestLink(x.hub.connect(x.code), { name: 'Cy', clock }));
+    await step();
+    expect(g2.link.status.kind).toBe('connected');
+    expect(g2.state).toEqual(x.host.state);
+  });
+
+  it('online rematch: full-time, both vote (one from each side) → a new toss on both screens', async () => {
+    const x = await setup({ settings: { kicksPerMatch: 10 } });
+    await draft(x);
+    while (x.host.state.phase === 'play') {
+      const s = x.host.state;
+      const seat = activeSeat(s)!;
+      of(x, seat).send(seat, { type: 'kick', turnId: s.turnId, input: { yaw: s.turnId, power: 0.7, curve: 0, loft: 0.1 }, auto: false });
+      await step();
+    }
+    expect(x.host.state.phase).toBe('fulltime');
+    expect(x.guest.state).toEqual(x.host.state);
+    x.guest.send(1, { type: 'rematch' });
+    await step();
+    expect(x.host.state.rematchVotes).toEqual([false, true]);
+    expect(x.guest.state.rematchVotes).toEqual([false, true]);
+    x.host.send(0, { type: 'rematch' });
+    await step();
+    expect(x.host.state.phase).toBe('toss');
+    expect(x.host.state.players).toEqual([]);
+    expect(x.guest.state).toEqual(x.host.state);
   });
 });
