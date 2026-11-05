@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M2 — Ball flight physics (M0, M1 done)
-- **Next task:** M2.2 `kick.ts` (kick model, throw-in caps)
+- **Next task:** M2.3 `step.ts` (forces, bounce, rolling, stop)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M2.1 done)
+- **Last updated:** 2026-11-05 (M2.2 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -30,7 +30,7 @@
 
 ## M2 — Ball flight physics · Opus 5.5 High
 - [x] M2.1 `vec3.ts`, `constants.ts`, `types.ts`
-- [ ] M2.2 `kick.ts` (kick model, throw-in caps)
+- [x] M2.2 `kick.ts` (kick model, throw-in caps)
 - [ ] M2.3 `step.ts` (forces, bounce, rolling, stop)
 - [ ] M2.4 `simulate.ts` (loop, frames, events)
 - [ ] M2.5 Physics tests incl. all PLAN §5.10 ranges
