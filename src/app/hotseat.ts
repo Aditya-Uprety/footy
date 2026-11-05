@@ -1,11 +1,13 @@
 // Hot-seat mode (#/hotseat, PLAN §3.3): name entry → toss → draft → match,
-// all on one device. M7.1: name entry.
-import { DEFAULT_SETTINGS } from '../game/settings';
+// all on one device. A LocalSession runs the HostCore in the page; the match
+// view follows its phases.
+import { defaultSettings, DEFAULT_SETTINGS } from '../game/settings';
 import type { Stage } from '../render/scene';
 import { derivePitch } from '../shared/pitch';
-import { h } from '../ui/dom';
 import { hotseatSetupScreen } from '../ui/menu';
 import { createInspectView, type InspectView } from './inspect';
+import { createMatchView, type MatchView } from './matchView';
+import { LocalSession } from './session';
 
 export interface HotseatOptions {
   debug: boolean;
@@ -16,18 +18,15 @@ export interface HotseatOptions {
 }
 
 export interface HotseatMode {
+  readonly session: LocalSession | null;
   dispose(): void;
 }
 
 export function createHotseatMode(stage: Stage | null, opts: HotseatOptions): HotseatMode {
   let backdrop: InspectView | null = null;
   let screen: HTMLElement | null = null;
-
-  function show(el: HTMLElement): void {
-    screen?.remove();
-    screen = el;
-    opts.overlay.append(el);
-  }
+  let session: LocalSession | null = null;
+  let match: MatchView | null = null;
 
   function setup(names?: [string, string]): void {
     if (stage && !backdrop) {
@@ -35,19 +34,33 @@ export function createHotseatMode(stage: Stage | null, opts: HotseatOptions): Ho
       backdrop.controls.autoRotate = true;
       backdrop.controls.autoRotateSpeed = 0.35;
     }
-    show(hotseatSetupScreen({ ...(names ? { names } : {}), onStart: start }));
+    screen = hotseatSetupScreen({ ...(names ? { names } : {}), onStart: start });
+    opts.overlay.append(screen);
   }
 
   function start(names: [string, string]): void {
-    show(h('div', { class: 'panel card', 'data-screen': 'toss' }, h('h1', {}, 'Coin toss'), h('p', {}, `${names[0]} vs ${names[1]}`)));
+    screen?.remove();
+    screen = null;
+    backdrop?.dispose();
+    backdrop = null;
+    const seed = opts.seed ?? Math.floor(Math.random() * 0x7fffffff);
+    session = new LocalSession({ settings: defaultSettings(), names, seed });
+    match = createMatchView({ stage, session, overlay: opts.overlay, debug: opts.debug, autoplace: opts.autoplace });
+    if (opts.debug || import.meta.env.DEV) Object.assign(window, { __hotseat: { session, match } });
   }
 
   setup();
 
   return {
+    get session() {
+      return session;
+    },
     dispose() {
       screen?.remove();
       backdrop?.dispose();
+      match?.dispose();
+      session?.dispose();
+      delete (window as { __hotseat?: unknown }).__hotseat;
     },
   };
 }

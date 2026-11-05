@@ -459,3 +459,66 @@ html, body {
 }
 .setup-field input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
 .setup-note { margin: 2px 0 0; }
+
+/* ---- Coin toss (M7.2) ---- */
+.toss { text-align: center; width: min(520px, calc(100vw - 32px)); }
+.toss-faces { margin: -4px 0 6px; font-size: 13px !important; }
+.coin-wrap {
+  display: block;
+  margin: 18px auto 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  perspective: 600px;
+  cursor: pointer;
+}
+.coin-wrap.landed { cursor: default; }
+.coin {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  transform-style: preserve-3d;
+}
+.coin-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: radial-gradient(circle at 35% 30%, #ffe79a, #e0a92a 60%, #a8771a);
+  border: 5px solid #c28d1f;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.25), 0 6px 18px rgba(0, 0, 0, 0.45);
+  color: #4d3505;
+}
+.coin-face-1 { transform: rotateY(180deg); background: radial-gradient(circle at 35% 30%, #f1f1f1, #b9bec4 60%, #7f858c); border-color: #9aa0a6; color: #2b2f33; }
+.coin-num { font: 800 46px/1 var(--font); }
+.coin-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 700; }
+.toss-status { min-height: 2.9em; margin: 8px 0 4px; color: var(--fg) !important; font-size: 16px !important; }
+.toss-wait { color: var(--fg-dim); font-size: 14px; }
+.toss-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; animation: toast-in 0.25s ease-out; }
+.role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 14px 12px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fg);
+  font: 14px/1.35 var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+.role-card strong { font-size: 17px; padding-left: 8px; border-left: 5px solid; }
+.role-card ul { margin: 0; padding-left: 20px; color: var(--fg-dim); font-size: 13px; }
+.role-A strong { border-left-color: #d8352f; }
+.role-B strong { border-left-color: #2c63d6; }
+.role-card:hover:not(:disabled), .role-card:focus-visible { background: rgba(255, 255, 255, 0.14); border-color: var(--accent); outline: none; }
+.role-card:disabled { cursor: default; opacity: 0.6; }
+.role-card.chosen { opacity: 1; border-color: var(--accent); }
+@media (max-width: 480px) { .toss-roles { grid-template-columns: 1fr; } }
