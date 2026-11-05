@@ -5,10 +5,10 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M1 — Pitch and goals (M0 done)
-- **Next task:** M1.A Acceptance checks
+- **Current milestone:** M2 — Ball flight physics (M0, M1 done)
+- **Next task:** M2.1 `vec3.ts`, `constants.ts`, `types.ts`
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M1.5 done)
+- **Last updated:** 2026-11-05 (M1 complete)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -26,7 +26,7 @@
 - [x] M1.3 Goals (posts, bar, net) + corner flags
 - [x] M1.4 Lighting, soft shadows, sky + fog
 - [x] M1.5 Inspect cameras (keys 1–4) + `?debug` axes and ruler
-- [ ] M1.A Acceptance checks passed (browser pane) and reported to the user
+- [x] M1.A Acceptance checks passed (browser pane) and reported to the user
 
 ## M2 — Ball flight physics · Opus 5.5 High
 - [ ] M2.1 `vec3.ts`, `constants.ts`, `types.ts`
@@ -152,3 +152,5 @@
 <!-- Short dated notes: deviations from PLAN.md, known issues, where a half-finished task stopped. -->
 - 2026-11-05 — **The browser pane has no WebGL on this machine** (GPU disabled in its sandbox; `getContext('webgl2')` returns null). DOM-only checks (routes, overlays, console) still use the pane; 3D views are verified with `node scripts/webgl-shot.mjs <url> <out.png> [steps]` (headless Chrome + SwiftShader over CDP: screenshots, console errors, `eval:`, `drag:`, `wheel:`, `key:`, `click:`). The dev server must be running (footy-dev).
 - 2026-11-05 — M0 notes: `src/main.ts` holds a temporary "inspect view" (temp ground + OrbitControls + lights) shared by all routes; M1 replaces the ground and adds the inspect cameras. Placeholder screens live in `ui/placeholders.ts`. `game/settings.ts` already exports `Settings`/`DEFAULT_SETTINGS` (M6.1 adds ranges/validation). Pitch tests were written in M0.2; M0.5 added `architecture.test.ts` and `app/router.test.ts`. `.claude/launch.json` also has "footy-preview" (port 4173).
+- 2026-11-05 — M1 notes: the inspect view (pitch, goals, environment, orbit camera, keys 1–4, debug aids) lives in `app/inspect.ts` and is still shared by every route; later modes bring their own views. `?debug` sets `window.__footy = { stage, controls, pitch, goTo, ruler }`. Markings are one merged mesh lifted 4 mm with polygon offset; the outer ground has a hole under the pitch (it z-fought at distance before). three r187 removed `PCFSoftShadowMap`, so the sun uses `PCFShadowMap` with `shadow.radius` 3 (4096 map). Draw calls ≈ 50–70 with shadows (goal tubes are separate meshes; merge in M12.4 if needed). M1 acceptance measured with real Shift+clicks: circle radius 9.16, box depth 16.47, penalty mark 11.01, between posts 7.42 (clicks on the post faces; inner edges are 7.32 by construction).
+- 2026-11-05 — Watch item (M12.4): in headless SwiftShader, lines farther than ~40 m break into dashes at grazing angles (sub-pixel width). Ask the user whether it shows on a real GPU with MSAA; if so, fade/widen distant lines or move markings to a mipmapped texture.

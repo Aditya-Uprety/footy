@@ -211,6 +211,7 @@ footy/
    │  └─ hud.ts  minimap.ts  screens.ts  help.ts
    └─ app/                         # glue per mode
       ├─ router.ts  session.ts     # Session interface + LocalSession
+      ├─ inspect.ts                # M1 inspect view: pitch + goals, orbit camera, keys 1–4, ?debug axes/ruler
       ├─ matchView.ts              # phase → cameras / panels / playback
       ├─ placementView.ts  aimController.ts
       ├─ practice.ts  lab.ts
@@ -778,3 +779,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 ## 14. Changelog
 - 2026-11-05 — Plan created in the planning chat. Decided with the user: placement anywhere except the center circle (GK in own box, 1 m line margin); the toss winner picks a role (A = first pick + kickoff, B = last pick); real set pieces (ghost-taker throw-ins and corners, goal kick to the keeper); keepers with a wider reach that catch; a loft slider 0–55°; 40 shared kicks with half-time after 20, draws allowed; 20 s shot timer that auto-kicks; 105×68 m, X = 8 m, Y = 4 m; ties go to the non-kicking team; no offside or fouls; view aids: zoom, adjustable camera height, hold-Tab map, minimap; desktop first, touch later. Physics constants sanity-checked with a throwaway simulation (§5.10).
 - 2026-11-05 — M0: the browser pane on the user's machine has no WebGL, so 3D checks use `scripts/webgl-shot.mjs` (headless Chrome + SwiftShader over CDP) alongside the pane (§4, §10). `Settings` + `DEFAULT_SETTINGS` were added early in `game/settings.ts` so no layer hardcodes 105/68 before M6.1; `base: './'` set already in M0 (M11.1 only needs to verify it). TypeScript 7.0.2 works; no fallback needed.
+- 2026-11-05 — M1: added `app/inspect.ts` to §4 (the shared inspect view used until each mode has its own). Sun shadows use `PCFShadowMap` + `shadow.radius` because three r187 removed `PCFSoftShadowMap`.
