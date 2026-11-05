@@ -37,12 +37,19 @@ export function createPitchView(pitch: Pitch, maxAnisotropy = 1): PitchView {
   const detail = createGrassDetailTexture(maxAnisotropy);
 
   // Outer ground: everything beyond the apron, kept dull so the pitch pops.
-  const outerGeo = new THREE.CircleGeometry(OUTER_RADIUS, 64);
+  // It has a hole under the grass so the two never overlap (no distant z-fighting).
+  const outerShape = new THREE.Shape().absarc(0, 0, OUTER_RADIUS, 0, Math.PI * 2, false);
+  const ax = pitch.halfLength + APRON;
+  const az = pitch.halfWidth + APRON;
+  outerShape.holes.push(
+    new THREE.Path().moveTo(-ax, -az).lineTo(ax, -az).lineTo(ax, az).lineTo(-ax, az).lineTo(-ax, -az),
+  );
+  const outerGeo = new THREE.ShapeGeometry(outerShape, 48);
   outerGeo.rotateX(-Math.PI / 2);
   const outerMat = new THREE.MeshLambertMaterial({ color: COLORS.outer });
   const outer = new THREE.Mesh(outerGeo, outerMat);
   outer.name = 'outer-ground';
-  outer.position.y = -0.02;
+  outer.position.y = -0.01;
   outer.receiveShadow = true;
   group.add(outer);
 
