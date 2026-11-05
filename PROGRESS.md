@@ -6,14 +6,14 @@
 
 ## Status
 - **Current milestone:** M0 — Scaffold and tooling
-- **Next task:** M0.2 Folder skeleton + `shared/pitch.ts`
+- **Next task:** M0.3 Renderer bootstrap
 - **Model for next task:** Opus 5.5 · High effort
 - **Last updated:** 2026-11-05
 - **Notes / blockers:** none
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
 - [x] M0.1 npm project: Vite + TS strict + three + vitest, pinned versions, scripts, .gitignore
-- [ ] M0.2 Folder skeleton + `shared/pitch.ts` (`derivePitch`)
+- [x] M0.2 Folder skeleton + `shared/pitch.ts` (`derivePitch`)
 - [ ] M0.3 Renderer bootstrap, temporary ground + OrbitControls, `?debug` FPS
 - [ ] M0.4 Hash router with placeholder screens + query flags
 - [ ] M0.5 Tests: pitch dimensions + architecture purity
