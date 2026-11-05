@@ -38,6 +38,8 @@ export interface AudioManager {
   readonly muted: boolean;
   setVolume(v: number): void;
   setMuted(m: boolean): void;
+  /** Called after the volume or mute changes (the sound control and the saved preferences listen). */
+  onChange(cb: () => void): () => void;
   /** Creates/resumes the context; call from a user gesture. Safe to call again. */
   unlock(): void;
   /** Plays a sound now. */
@@ -78,6 +80,10 @@ export function createAudioManager(): AudioManager {
   let wantAmbience = false;
   let unsupported = false;
   let groan: { gain: GainNode } | null = null;
+  const listeners = new Set<() => void>();
+  const changed = (): void => {
+    for (const cb of [...listeners]) cb();
+  };
 
   /** Slider position to gain: squared, so the low end of the slider is usable. */
   const masterGain = (): number => (muted ? 0 : volume * volume);
@@ -182,12 +188,21 @@ export function createAudioManager(): AudioManager {
       return log;
     },
     setVolume(v) {
-      volume = Math.min(1, Math.max(0, Number.isFinite(v) ? v : volume));
+      const next = Math.min(1, Math.max(0, Number.isFinite(v) ? v : volume));
+      if (next === volume) return;
+      volume = next;
       applyMaster();
+      changed();
     },
     setMuted(m) {
+      if (m === muted) return;
       muted = m;
       applyMaster();
+      changed();
+    },
+    onChange(cb) {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
     },
     unlock() {
       if (unsupported) return;

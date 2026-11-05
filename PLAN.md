@@ -215,7 +215,7 @@ footy/
    ├─ ui/                          # DOM overlays
    │  ├─ dom.ts  styles.css
    │  ├─ menu.ts  lobby.ts  toss.ts  placementPanel.ts  kickPanel.ts
-   │  └─ hud.ts  minimap.ts  screens.ts  help.ts  helpOverlay.ts  kitTheme.ts  settingsPanel.ts
+   │  └─ hud.ts  minimap.ts  screens.ts  help.ts  helpOverlay.ts  kitTheme.ts  settingsPanel.ts  soundControl.ts
    └─ app/                         # glue per mode
       ├─ router.ts  session.ts     # Session interface + LocalSession
       ├─ inspect.ts                # M1 inspect view: pitch + goals, orbit camera, keys 1–4, ?debug axes/ruler
@@ -228,7 +228,7 @@ footy/
       ├─ kickFlow.ts               # one turn: aim → wind-up → playback → eased move to the next kicker (M5.3; reused by M8/M10)
       ├─ online.ts                 # #/host and #/join lobby modes: PeerJS room + HostLink/GuestLink → lobby UI, connection overlay (M9)
       ├─ practice.ts  practiceRules.ts  lab.ts
-      ├─ audio.ts                  # WebAudio manager: unlock on first gesture, voices, crowd bed, whistles, volume/mute (M14)
+      ├─ audio.ts  audioPrefs.ts   # WebAudio manager: unlock on first gesture, voices, crowd bed, whistles, volume/mute (M14); audioPrefs = saved volume/mute (localStorage `footy-audio`)
       ├─ audioCues.ts              # pure: SimEvent → sounds + gain/rate (tested)
       └─ soundSynth.ts             # pure: procedural sound effects as Float32Array (tested); no audio files
 ```
@@ -813,3 +813,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 - 2026-11-05 — M13.3: lobby settings (§2.9) are edited in a panel on the hot-seat setup and the host lobby; the guest sees them read-only. Protocol §8.2 (still version 1, additive): `welcome` may carry `settings`, and the host sends a `settings` message on every lobby change before the match; the guest's link handles it (it never reaches the session). `?shot=N` / `?place=N` only set the initial panel values now. No rules or constants changed.
 - 2026-11-05 — M13.4: `Settings.kitPair` (index into `shared/kits.ts` `KIT_PAIRS`: Red·Blue default, Orange·Navy, Yellow·Purple, White·Teal) is chosen in the lobby settings panel and synced like the other settings (protocol §8.2 stays v1: `kitPair` is optional on the wire). Team names are the seat names (already editable); kit names ("Red", "Teal") come from the pair. The in-match key help (H or the ? button) is `ui/helpOverlay.ts`, built on `ui/help.ts` `controlsTable()`. No rules or constants changed.
 - 2026-11-05 — M14.1: all sounds are procedural (`app/soundSynth.ts`), so `public/sfx/` holds only `LICENSES.md` (no files to license). Added `app/audio.ts`, `app/audioCues.ts`, `app/soundSynth.ts` to §4. The audio context is created on the first pointer/key press (`unlockAudioOnGesture` in `main.ts`); before that every call is a silent no-op. Sounds follow playback events (kick scaled by power, bounce/thud by impact speed, post/bar clang + a groan, net swish, keeper catch + small cheer, goal roar, groan for a goal-line exit within 8 m of the goal's center); the referee whistles at every kickoff (match start, after a goal, second half), at half-time and at full-time. The crowd bed plays from the play phase on (and in Practice). Dev hook: `window.__audio` (`state`, `log`). No rules or constants changed.
+- 2026-11-05 — M14.2: volume and mute live in `app/audioPrefs.ts` (localStorage key `footy-audio`, guarded against blocked storage) and are edited with `ui/soundControl.ts`: a speaker button (click or **M** mutes; the key is in the controls tables) plus a volume slider, bottom-right on every screen, created once in `main.ts` outside the router's `#screen`. Master gain = volume². Per-viewer, not part of `Settings`, never synced. No rules or constants changed.

@@ -95,6 +95,7 @@ export const KEY_ROWS: readonly KeyRow[] = [
   { action: 'Overhead map', mouse: 'Hold the map button', keys: 'Hold Tab' },
   { action: 'Fast-forward playback', mouse: '—', keys: 'Hold F' },
   { action: 'Playback camera', mouse: '—', keys: 'C' },
+  { action: 'Mute / unmute sound', mouse: 'Speaker button', keys: 'M' },
   { action: 'This help', mouse: '—', keys: 'H' },
 ];
 

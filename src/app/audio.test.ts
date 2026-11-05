@@ -162,6 +162,20 @@ describe('audio manager (M14.1)', () => {
       expect(a.muted).toBe(true);
     });
 
+    it('tells listeners about real changes only, until they unsubscribe', () => {
+      const a = createAudioManager();
+      const cb = vi.fn();
+      const off = a.onChange(cb);
+      a.setVolume(0.5);
+      a.setVolume(0.5);
+      a.setMuted(true);
+      a.setMuted(true);
+      expect(cb).toHaveBeenCalledTimes(2);
+      off();
+      a.setMuted(false);
+      expect(cb).toHaveBeenCalledTimes(2);
+    });
+
     it('unlockAudioOnGesture registers and removes its listeners', () => {
       // Listener bookkeeping only (the shared instance does the unlocking).
       const off = unlockAudioOnGesture(fake.win as unknown as Window);

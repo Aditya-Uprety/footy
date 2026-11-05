@@ -807,3 +807,25 @@ kbd { display: inline-block; padding: 1px 7px; border-radius: var(--radius-sm); 
 }
 .help-fab:hover, .help-fab[aria-expanded='true'] { opacity: 1; border-color: var(--accent); }
 .help-more { margin: 14px 0 0; font-size: 12.5px; }
+
+/* ---- sound control (M14.2): speaker button + volume slider, bottom-right ---- */
+.sound-ctl {
+  position: absolute; right: 12px; bottom: 12px; z-index: 7; display: flex; align-items: center; gap: 4px;
+  height: 34px; padding: 0 6px 0 2px; border-radius: 17px; border: 1px solid var(--panel-border);
+  background: rgb(20 26 24 / 0.82); color: var(--fg); pointer-events: auto; opacity: 0.75;
+  transition: opacity 0.15s var(--ease, ease);
+}
+.sound-ctl:hover, .sound-ctl:focus-within { opacity: 1; }
+.sound-btn {
+  display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: inherit; cursor: pointer;
+}
+.sound-btn:hover { color: var(--accent); }
+.sound-ctl.muted .sound-btn { color: var(--fg-dim); }
+.sound-slider {
+  width: 0; margin: 0; opacity: 0; accent-color: var(--accent); cursor: pointer;
+  transition: width 0.18s var(--ease, ease), opacity 0.18s var(--ease, ease);
+}
+.sound-ctl:hover .sound-slider, .sound-ctl:focus-within .sound-slider { width: 84px; margin-right: 4px; opacity: 1; }
+.sound-ctl.muted .sound-slider { filter: grayscale(1); }
+@media (hover: none) { .sound-slider { width: 84px; margin-right: 4px; opacity: 1; } }

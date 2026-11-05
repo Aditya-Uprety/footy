@@ -1,6 +1,7 @@
 // Boot: DOM layers → 3D stage (if WebGL is available) → router.
 import './ui/styles.css';
 import { audio, unlockAudioOnGesture } from './app/audio';
+import { bindAudioPrefs } from './app/audioPrefs';
 import { createHotseatMode } from './app/hotseat';
 import { createInspectView, type InspectView } from './app/inspect';
 import { createLabView } from './app/lab';
@@ -14,11 +15,14 @@ import { derivePitch } from './shared/pitch';
 import { clear, h } from './ui/dom';
 import { howToPlayScreen } from './ui/help';
 import { menuScreen } from './ui/menu';
+import { createSoundControl } from './ui/soundControl';
 import { placeholderScreen } from './ui/placeholders';
 
 const flags = getFlags();
 // Browsers only allow sound after a user gesture: create the audio context on the first one.
 unlockAudioOnGesture();
+// Volume and mute are remembered between visits (M14.2).
+bindAudioPrefs(audio);
 const dev = import.meta.env.DEV || flags.debug;
 if (dev) (window as unknown as { __audio?: unknown }).__audio = audio;
 
@@ -28,6 +32,8 @@ const uiEl = h('div', { id: 'ui' });
 const screenEl = h('div', { id: 'screen' });
 uiEl.append(screenEl);
 app.append(stageEl, uiEl);
+// One speaker control for every screen; it lives outside #screen, which the router clears.
+createSoundControl(audio, uiEl);
 
 function tryCreateStage(): Stage | null {
   try {
