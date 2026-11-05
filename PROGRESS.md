@@ -6,7 +6,7 @@
 
 ## Status
 - **Current milestone:** M0 — Scaffold and tooling
-- **Next task:** M0.3 Renderer bootstrap
+- **Next task:** M0.4 Hash router
 - **Model for next task:** Opus 5.5 · High effort
 - **Last updated:** 2026-11-05
 - **Notes / blockers:** none
@@ -14,7 +14,7 @@
 ## M0 — Scaffold and tooling · Opus 5.5 High
 - [x] M0.1 npm project: Vite + TS strict + three + vitest, pinned versions, scripts, .gitignore
 - [x] M0.2 Folder skeleton + `shared/pitch.ts` (`derivePitch`)
-- [ ] M0.3 Renderer bootstrap, temporary ground + OrbitControls, `?debug` FPS
+- [x] M0.3 Renderer bootstrap, temporary ground + OrbitControls, `?debug` FPS
 - [ ] M0.4 Hash router with placeholder screens + query flags
 - [ ] M0.5 Tests: pitch dimensions + architecture purity
 - [ ] M0.6 `.claude/launch.json` + README stub
@@ -150,3 +150,4 @@
 
 ## Notes
 <!-- Short dated notes: deviations from PLAN.md, known issues, where a half-finished task stopped. -->
+- 2026-11-05 — **The browser pane has no WebGL on this machine** (GPU disabled in its sandbox; `getContext('webgl2')` returns null). DOM-only checks (routes, overlays, console) still use the pane; 3D views are verified with `node scripts/webgl-shot.mjs <url> <out.png> [steps]` (headless Chrome + SwiftShader over CDP: screenshots, console errors, `eval:`, `drag:`, `wheel:`, `key:`, `click:`). The dev server must be running (footy-dev).

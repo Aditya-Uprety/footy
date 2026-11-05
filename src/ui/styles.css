@@ -1,0 +1,112 @@
+/* Base styles. A full theme arrives in M13.1. */
+:root {
+  --fg: #f4f7f4;
+  --fg-dim: #b9c6bb;
+  --panel: rgba(12, 22, 16, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.14);
+  --accent: #ffd34d;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0c1610;
+  color: var(--fg);
+  font-family: var(--font);
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+}
+
+.stage-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+/* The UI layer never blocks the 3D view; panels opt back in. */
+#ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#ui .panel {
+  pointer-events: auto;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  backdrop-filter: blur(6px);
+}
+
+.placeholder {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  max-width: min(420px, calc(100vw - 32px));
+}
+
+.placeholder h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+.placeholder p {
+  margin: 0 0 10px;
+  color: var(--fg-dim);
+  font-size: 14px;
+}
+
+.placeholder nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.placeholder a {
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--panel-border);
+}
+
+.placeholder a:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.placeholder code {
+  color: var(--accent);
+}
+
+.debug-fps {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #9f9;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  pointer-events: none;
+  z-index: 10;
+}
