@@ -25,6 +25,7 @@ import {
 import { createInspectView, type InspectView } from './inspect';
 import { createMatchView, type MatchView } from './matchView';
 import { normalizeRoomCode, routeToHash } from './router';
+import { loadUserPrefs, saveUserPrefs, startingSettings } from './userPrefs';
 
 export interface OnlineOptions {
   role: 'host' | 'join';
@@ -142,13 +143,14 @@ function hostMode(ctx: MatchCtx): OnlineMode {
   let match: MatchView | null = null;
   const overlay = overlayHelper(opts.overlay);
   /** The match settings: query-flag overrides first, then whatever the host sets in the lobby panel. */
-  let settings: Settings = sanitizeSettings(opts.settings ?? {});
+  let settings: Settings = startingSettings(opts.settings);
   const lobby = createHostLobby({
-    name: '',
+    name: loadUserPrefs().onlineName,
     settings,
     onSettings: (s) => {
       settings = s;
       link?.setSettings(s);
+      saveUserPrefs({ settings: s });
     },
     onRetry: () => open(),
     onStart: () => startMatch(),
@@ -267,6 +269,7 @@ function hostMode(ctx: MatchCtx): OnlineMode {
   // Name edits before a guest joins go out with the welcome.
   lobby.el.addEventListener('input', () => {
     if (link) link.name = myName();
+    saveUserPrefs({ onlineName: lobby.name() });
   });
 
   void open();
@@ -301,7 +304,7 @@ function joinMode(ctx: MatchCtx): OnlineMode {
   const overlay = overlayHelper(opts.overlay);
   const lobby = createJoinLobby({
     code,
-    name: '',
+    name: loadUserPrefs().onlineName,
     onJoin: (c, n) => join(c, n),
     onLeave: () => leave(),
   });
@@ -325,6 +328,7 @@ function joinMode(ctx: MatchCtx): OnlineMode {
     }
     code = c;
     name = sanitizeName(rawName, defaultName(1));
+    saveUserPrefs({ onlineName: rawName });
     lobby.setCode(c);
     // Keep the address bar shareable / refreshable.
     if (window.location.hash !== routeToHash({ name: 'join', code: c })) {

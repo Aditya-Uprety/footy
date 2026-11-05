@@ -8,6 +8,7 @@ import { hotseatSetupScreen } from '../ui/menu';
 import { createInspectView, type InspectView } from './inspect';
 import { createMatchView, type MatchView } from './matchView';
 import { LocalSession } from './session';
+import { loadUserPrefs, saveUserPrefs, startingSettings } from './userPrefs';
 
 export interface HotseatOptions {
   debug: boolean;
@@ -31,7 +32,7 @@ export function createHotseatMode(stage: Stage | null, opts: HotseatOptions): Ho
   let match: MatchView | null = null;
 
   /** The settings shown in the setup panel; kept across restarts of the setup. */
-  let chosen: Settings = sanitizeSettings(opts.settings ?? {});
+  let chosen: Settings = startingSettings(opts.settings);
 
   function setup(names?: [string, string]): void {
     if (stage && !backdrop) {
@@ -39,12 +40,14 @@ export function createHotseatMode(stage: Stage | null, opts: HotseatOptions): Ho
       backdrop.controls.autoRotate = true;
       backdrop.controls.autoRotateSpeed = 0.35;
     }
-    screen = hotseatSetupScreen({ ...(names ? { names } : {}), settings: chosen, onStart: start });
+    const remembered = names ?? loadUserPrefs().hotseatNames;
+    screen = hotseatSetupScreen({ names: remembered, settings: chosen, onStart: start });
     opts.overlay.append(screen);
   }
 
   function start(names: [string, string], settings: Settings = chosen): void {
     chosen = settings;
+    if (!opts.autoplace) saveUserPrefs({ hotseatNames: names, settings: sanitizeSettings(settings) });
     screen?.remove();
     screen = null;
     backdrop?.dispose();

@@ -5,10 +5,10 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M15 — Replays and quality of life (M15.1–M15.3 done) (M0–M14 done)
-- **Next task:** M15.4 Remember names and settings
+- **Current milestone:** M15 — Replays and quality of life (M15.1–M15.4 done) (M0–M14 done)
+- **Next task:** M15.A Acceptance checks
 - **Model for next task:** Sonnet 5.5 · High effort
-- **Last updated:** 2026-11-05 (M15.3 done; live at https://aditya-uprety.github.io/footy/; two-device check on the user's Wi-Fi from M10 still to do by the user)
+- **Last updated:** 2026-11-05 (M15.4 done; live at https://aditya-uprety.github.io/footy/; two-device check on the user's Wi-Fi from M10 still to do by the user)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes). Nothing pushed since M13: the live site does not have audio yet (push only when the user says so).
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -132,7 +132,7 @@
 - [x] M15.1 Replay last kick (cameras, slow-mo)
 - [x] M15.2 Auto goal replay (skippable)
 - [x] M15.3 Match log + full-time stats
-- [ ] M15.4 Remember names and settings
+- [x] M15.4 Remember names and settings
 - [ ] M15.A Acceptance checks passed and reported to the user
 
 ## M16 — Touch and mobile · Sonnet 5.5 High
@@ -188,3 +188,4 @@
 - 2026-11-05 — M15.1: see PLAN §14. `app/kickFlow.ts` gained phase `'replay'` and `startReplay/stopReplay/restartReplay/setReplayCamera/setReplaySpeed/forgetLast`, getters `canReplay`, `replay` ({cam, speed, done}) and `replayPlayback`, and option `onReplayEvent` (audio only). `app/replayModel.ts` (pure, tested) + `app/replayControls.ts` (button + bar, polled per frame, hidden under the hold-Tab map / half-time card). `render/cameras.ts` `createPlaybackCamera` has a third rig `'goal'` + `setGoalSide`. `playView` keeps the shot timer running through a replay (onPhase ignores replay phases) and closes the replay when it expires. Verified with webgl-shot on hot-seat (`?autoplace&seed=3`): R opens the replay after kick 1 (button visible in aim, bar with camera/speed/Again/Close in replay), C cycles chase → broadcast → behind goal, keys 1–3 set speed, R closes and the aim rig + kick bar are live again, shot-timer ring keeps counting, no console errors. Not done live: online spectating replay (same flow code, no extra branch) and real-GPU look. `npm run check` 49 files, 454 tests green.
 - 2026-11-05 — M15.2: see PLAN §14. Wiring is in `playView.finishKick` (after `afterKickToast`): `wantsGoalReplay(prev, shown) && flow.canReplay` → `beginTurn(true)` + `flow.startReplay({ auto: true })`; `onPhase` holds the shot timer while an auto replay runs and, when it returns to aim, starts the timer and plays the kickoff whistle. `ReplayState` gained `auto`; `replayControls` shows "GOAL REPLAY" + camera buttons + Skip for it. Verified with webgl-shot on hot-seat (`?autoplace&seed=3`, crafted ghost possession at (30, −8), 70 % power, yaw 0.24 → goal): score 1–0, replay starts at once (timer ring full and stopped), bar shows GOAL REPLAY / Chase / Broadcast / Behind goal / Skip, it closes by itself, aim rig + timer live again and the kickoff for Blue is up; no console errors. Not checked live: online (both devices run the same code path) and Skip by click on a real display. `npm run check` 49 files, 457 tests green.
 - 2026-11-05 — M15.3: see PLAN §14. New: `game/matchLog.ts` (+ test), `GameState.log` appended in `rules.resolveOutcome` and checked by `isGameState`, `ui/matchLog.ts` (`statsTable`, `logList`, `createMatchLogPanel`: L key + small L button next to the ? button), `logLine`/`STAT_ROWS` in `app/matchText.ts`, a wider full-time card (`overlay-wide`) with the stats table and a collapsible kick list. The panel and the full-time card read `matchView`'s *shown* state. Verified with webgl-shot on hot-seat (`?autoplace&seed=3`, dev server of another chat on 5173; the pane's own `preview_start` can't bind 5173): L opens the panel after 3 kicks (stats 3 kicks / 100 % possession, kick list rows), a crafted jump to kick 40 reaches the full-time card with goals 1–0 matching the score, Blue's off-target shot and corner counted; no console errors. Not checked live: online (the log rides the normal snapshots; `isGameState` and the 10-kick integration tests cover it), and the 'Kick by kick' `<details>` expanded on the full-time card (same `logList` as the L panel). Possession % is the share of kicks, not of time (each kick is a turn with the ball). `npm run check` 50 files, 466 tests green; `npm run build` ok.
+- 2026-11-05 — M15.4: see PLAN §14. New `app/userPrefs.ts` (+ test): one localStorage key `footy-prefs` with hot-seat names, the online name and the last settings; `startingSettings(flags)` = saved settings with the query flags on top. Hot-seat saves on Start (not under `?autoplace`); the host lobby saves settings on every change and the name on every keystroke; the join lobby saves the name when you press Join. Verified in the browser pane (dev server of this chat): hot-seat names Ada/Bo and 10 kicks were saved on Start and prefilled after a reload; the host lobby prefilled the saved name and settings summary, and typing a name saved it; only the expected WebGL console errors. Not checked: two-device flow (nothing about it changed on the wire). `npm run check` 51 files, 473 tests green.
