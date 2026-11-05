@@ -2,6 +2,7 @@
 import './ui/styles.css';
 import { createInspectView } from './app/inspect';
 import { createLabView } from './app/lab';
+import { createPracticeView } from './app/practice';
 import { getFlags, startRouter, type Route } from './app/router';
 import { DEFAULT_SETTINGS } from './game/settings';
 import { createFpsCounter } from './render/debug';
@@ -40,8 +41,8 @@ const stage = tryCreateStage();
 if (stage && flags.debug) createFpsCounter(stage, uiEl);
 const pitch = derivePitch(DEFAULT_SETTINGS);
 
-/** The 3D view for the current route: the Lab has its own, everything else shares the inspect view (until M5/M7). */
-type ViewKind = 'inspect' | 'lab';
+/** The 3D view for the current route: Lab and Practice have their own, everything else shares the inspect view (until M7). */
+type ViewKind = 'inspect' | 'lab' | 'practice';
 let view: { kind: ViewKind; dispose(): void } | null = null;
 
 function ensureView(kind: ViewKind): void {
@@ -51,15 +52,17 @@ function ensureView(kind: ViewKind): void {
   const v =
     kind === 'lab'
       ? createLabView(stage, pitch, { debug: flags.debug, overlay: screenEl })
-      : createInspectView(stage, pitch, { debug: flags.debug, overlay: uiEl });
+      : kind === 'practice'
+        ? createPracticeView(stage, pitch, { debug: flags.debug, seed: flags.seed, overlay: screenEl })
+        : createInspectView(stage, pitch, { debug: flags.debug, overlay: uiEl });
   view = { kind, dispose: () => v.dispose() };
 }
 
 function showRoute(route: Route): void {
-  const kind: ViewKind = route.name === 'lab' ? 'lab' : 'inspect';
+  const kind: ViewKind = route.name === 'lab' || route.name === 'practice' ? route.name : 'inspect';
   clear(screenEl);
   ensureView(kind);
-  if (kind !== 'lab' || !stage) screenEl.append(placeholderScreen(route, { dev: import.meta.env.DEV || flags.debug }));
+  if (kind === 'inspect' || !stage) screenEl.append(placeholderScreen(route, { dev: import.meta.env.DEV || flags.debug }));
   document.title = route.name === 'menu' ? 'Footy' : `Footy · ${route.name}`;
 }
 
