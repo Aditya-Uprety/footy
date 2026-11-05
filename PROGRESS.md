@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M5 — Aiming and kicking (Practice mode) (M0–M4 done)
-- **Next task:** M5.2 kick side bar (Power / Curve / Loft / height / KICK + keys + restart caps)
+- **Next task:** M5.3 kick flow (wind-up → simulate → playback → ease to next kicker)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M5.1 done)
+- **Last updated:** 2026-11-05 (M5.2 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -55,7 +55,7 @@
 
 ## M5 — Aiming and kicking (Practice mode) · Opus 5.5 High
 - [x] M5.1 Aim camera rig (yaw, pitch, zoom, height; kicker hidden; no crosshair)
-- [ ] M5.2 Kick side bar (Power / Curve / Loft / height / KICK + keys + restart caps)
+- [x] M5.2 Kick side bar (Power / Curve / Loft / height / KICK + keys + restart caps)
 - [ ] M5.3 Kick flow: wind-up → simulate → playback → ease to next kicker
 - [ ] M5.4 Hold-Tab overhead map + always-on minimap (no facing info)
 - [ ] M5.5 Practice mode `#/practice`

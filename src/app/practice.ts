@@ -3,6 +3,7 @@
 import type { Stage } from '../render/scene';
 import type { Pitch } from '../shared/pitch';
 import { PHYS } from '../sim/constants';
+import { createKickPanel } from '../ui/kickPanel';
 import { createAimController } from './aimController';
 import { createInspectView } from './inspect';
 
@@ -27,10 +28,19 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
   aim.active = true;
   aim.inputEnabled = true;
 
-  Object.assign(window, { __practice: { aim } });
+  const panel = createKickPanel();
+  opts.overlay.append(panel.el);
+  panel.setHeight(aim.state.height);
+  panel.onHeight((hgt) => aim.setHeight(hgt));
+  aim.onChange((s) => panel.setHeight(s.height));
+  const offFrame = stage.onFrame((dt) => panel.update(dt));
+
+  Object.assign(window, { __practice: { aim, panel } });
 
   return {
     dispose() {
+      offFrame();
+      panel.dispose();
       aim.dispose();
       world.dispose();
       delete (window as { __practice?: unknown }).__practice;
