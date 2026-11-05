@@ -99,6 +99,15 @@ export function stepAimKeys(s: AimState, keys: AimKeys, dt: number, fine: boolea
   return out;
 }
 
+/**
+ * Pinch zoom (touch): spreading the fingers zooms in. `startDist` / `dist` are
+ * the distances between the two fingers at the start and now, px.
+ */
+export function pinchFov(startFov: number, startDist: number, dist: number): number {
+  if (!(startDist > 0) || !(dist > 0)) return clamp(startFov, AIM.FOV_MIN, AIM.FOV_MAX);
+  return clamp(startFov * (startDist / dist), AIM.FOV_MIN, AIM.FOV_MAX);
+}
+
 /** Wheel zoom: deltaY > 0 zooms out (wider FOV). */
 export function zoomFov(fov: number, wheelDeltaY: number): number {
   return clamp(fov * Math.exp(wheelDeltaY * AIM.FOV_WHEEL), AIM.FOV_MIN, AIM.FOV_MAX);
@@ -216,29 +225,44 @@ export function createAimController(stage: Stage, opts: AimControllerOptions): A
     }
   }
 
-  // ---- mouse ---------------------------------------------------------------
-  let dragging: { id: number; x: number; y: number } | null = null;
+  // ---- pointer: mouse drag, one-finger drag, two-finger pinch -----------------
+  /** Pointers currently down on the view (mouse button 0, fingers, pen). */
+  const pointers = new Map<number, { x: number; y: number }>();
+  let pinch: { fov: number; dist: number } | null = null;
   const canvas = stage.canvas;
+  const pointerDist = (): number => {
+    const [a, b] = [...pointers.values()];
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+  };
   const onDown = (ev: PointerEvent): void => {
-    if (!active || !inputEnabled || ev.button !== 0) return;
-    dragging = { id: ev.pointerId, x: ev.clientX, y: ev.clientY };
+    if (!active || !inputEnabled || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
     canvas.setPointerCapture?.(ev.pointerId);
     canvas.classList.add('aim-dragging');
+    // The second finger turns the drag into a pinch (a third is ignored).
+    if (pointers.size === 2) pinch = { fov: state.fov, dist: pointerDist() };
   };
   const onMove = (ev: PointerEvent): void => {
-    if (!dragging || ev.pointerId !== dragging.id) return;
-    const dx = ev.clientX - dragging.x;
-    const dy = ev.clientY - dragging.y;
-    dragging.x = ev.clientX;
-    dragging.y = ev.clientY;
+    const p = pointers.get(ev.pointerId);
+    if (!p) return;
+    const dx = ev.clientX - p.x;
+    const dy = ev.clientY - p.y;
+    p.x = ev.clientX;
+    p.y = ev.clientY;
     if (!active || !inputEnabled) return;
-    set(applyDrag(state, dx, dy, ev.shiftKey));
+    if (pinch) {
+      const fov = pinchFov(pinch.fov, pinch.dist, pointerDist());
+      if (fov !== state.fov) set({ ...state, fov });
+    } else if (pointers.size === 1) {
+      set(applyDrag(state, dx, dy, ev.shiftKey));
+    }
   };
   const endDrag = (ev: PointerEvent): void => {
-    if (!dragging || ev.pointerId !== dragging.id) return;
-    dragging = null;
+    if (!pointers.delete(ev.pointerId)) return;
     canvas.releasePointerCapture?.(ev.pointerId);
-    canvas.classList.remove('aim-dragging');
+    // Lifting one finger of a pinch ends it; the finger left down does not turn the view until it is lifted and pressed again.
+    if (pointers.size < 2) pinch = null;
+    if (pointers.size === 0) canvas.classList.remove('aim-dragging');
   };
   const onWheel = (ev: WheelEvent): void => {
     if (!active || !inputEnabled) return;
@@ -246,6 +270,11 @@ export function createAimController(stage: Stage, opts: AimControllerOptions): A
     const dy = ev.deltaMode === 1 ? ev.deltaY * 33 : ev.deltaY;
     const fov = zoomFov(state.fov, dy);
     if (fov !== state.fov) set({ ...state, fov });
+  };
+  const clearPointers = (): void => {
+    pointers.clear();
+    pinch = null;
+    canvas.classList.remove('aim-dragging');
   };
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
@@ -273,7 +302,7 @@ export function createAimController(stage: Stage, opts: AimControllerOptions): A
   const onBlur = (): void => {
     Object.assign(keys, noAimKeys());
     shift = false;
-    dragging = null;
+    clearPointers();
   };
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
@@ -316,10 +345,7 @@ export function createAimController(stage: Stage, opts: AimControllerOptions): A
     set active(v: boolean) {
       active = v;
       if (v) applyCamera();
-      else {
-        dragging = null;
-        canvas.classList.remove('aim-dragging');
-      }
+      else clearPointers();
     },
     get inputEnabled() {
       return inputEnabled;

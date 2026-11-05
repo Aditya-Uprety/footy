@@ -68,6 +68,7 @@ Flags go in the query string before the hash, e.g. `http://localhost:5173/?debug
 - `?debug`: hitboxes, FPS and draw calls, ruler, `window.__footy`
 - `?seed=N`: deterministic random seed
 - `?autoplace`: auto-fill a legal draft (hot-seat and the online host)
+- `?touch`: show the touch button row on a mouse device (phones and tablets get it automatically)
 - `?shot=N` / `?place=N`: shot / placement timer in seconds (0 = off; hot-seat and the online host)
 
 ### Deploying

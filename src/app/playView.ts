@@ -20,6 +20,7 @@ import type { PlayersView } from '../render/players';
 import type { Stage } from '../render/scene';
 import { createHud } from '../ui/hud';
 import { createKickPanel, type KickSliders } from '../ui/kickPanel';
+import { createTouchBar, isTouchUi } from '../ui/touchBar';
 import { createHalfTimeOverlay } from '../ui/screens';
 import { createAimController } from './aimController';
 import { audio } from './audio';
@@ -27,6 +28,7 @@ import { INSPECT_FOV, type InspectView } from './inspect';
 import { createKickFlow, type FlowPhase, type Turn } from './kickFlow';
 import { createMapControls } from './mapControls';
 import { createReplayControls } from './replayControls';
+import { getFlags } from './router';
 import { wantsGoalReplay } from './replayModel';
 import {
   afterKickToast,
@@ -297,6 +299,16 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
   });
 
   const replayControls = createReplayControls({ stage, flow, overlay: opts.overlay, covered: () => maps.shown || halftime !== null });
+  // Touch devices: hold-Map, hold-Fast, camera and height buttons (M16.1).
+  const touchBar = isTouchUi(getFlags().touch)
+    ? createTouchBar({
+        overlay: opts.overlay,
+        onMap: (on) => maps.show(on),
+        onFast: (on) => flow.setFastForward(on),
+        onCamera: () => flow.toggleCamera(),
+        onHeight: (d) => aim.setHeight(aim.state.height + d),
+      })
+    : null;
   const offFrame = stage.onFrame((dt) => {
     if (timer.update(dt)) {
       // §2.4.4: at 0 the ball is kicked with the current direction and sliders
@@ -344,6 +356,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
       halftime?.dispose();
       halftime = null;
       replayControls.dispose();
+      touchBar?.dispose();
       maps.dispose();
       flow.dispose();
       panel.dispose();

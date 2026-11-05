@@ -47,6 +47,8 @@ export const CURVE_DETENT = 4;
 export const CURVE_DETENT_HOLD = 0.3;
 /** A held key starts repeating after this delay, s (a tap is one step). */
 export const KEY_REPEAT_DELAY = 0.22;
+/** Two taps on the curve slider within this reset it to 0 (touch), ms. */
+export const DOUBLE_TAP_MS = 320;
 /** Camera-height step for the slider, m. */
 export const HEIGHT_STEP = 0.1;
 
@@ -242,9 +244,21 @@ export function createKickPanel(): KickPanel {
       values = clampSliders({ ...values, [key]: v }, caps);
       render();
     };
+    let lastTap = 0;
     track.addEventListener('pointerdown', (ev) => {
       if (!enabled || ev.button !== 0) return;
       if (key === 'curve' && curveLocked(caps)) return;
+      // Double tap on the curve slider = back to straight (dblclick is unreliable on touch).
+      if (key === 'curve' && ev.pointerType !== 'mouse') {
+        if (ev.timeStamp - lastTap < DOUBLE_TAP_MS) {
+          lastTap = 0;
+          values = { ...values, curve: 0 };
+          render();
+          ev.preventDefault();
+          return;
+        }
+        lastTap = ev.timeStamp;
+      }
       id = ev.pointerId;
       track.setPointerCapture?.(ev.pointerId);
       fromEvent(ev);

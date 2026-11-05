@@ -13,6 +13,7 @@ import {
   applyDrag,
   defaultAimPitch,
   noAimKeys,
+  pinchFov,
   stepAimKeys,
   withHeight,
   zoomFov,
@@ -128,5 +129,18 @@ describe('aim view (§6.1)', () => {
       expect(b.x).toBeCloseTo(player.x + Math.cos(yawDeg * DEG) * off, 9);
       expect(b.z).toBeCloseTo(player.z + Math.sin(yawDeg * DEG) * off, 9);
     }
+  });
+});
+
+describe('pinch zoom (M16.1)', () => {
+  it('spreading the fingers zooms in (smaller FOV), pinching zooms out', () => {
+    expect(pinchFov(60, 100, 200)).toBeCloseTo(30, 10);
+    expect(pinchFov(30, 200, 100)).toBeCloseTo(60, 10);
+  });
+  it('is clamped to the FOV range and ignores a degenerate distance', () => {
+    expect(pinchFov(60, 100, 1000)).toBe(AIM.FOV_MIN);
+    expect(pinchFov(60, 100, 10)).toBe(AIM.FOV_MAX);
+    expect(pinchFov(60, 0, 100)).toBe(60);
+    expect(pinchFov(60, 100, 0)).toBe(60);
   });
 });

@@ -23,6 +23,8 @@ export interface Flags {
   shot: number | null;
   /** ?place=N: placement timer seconds (0 = off). */
   place: number | null;
+  /** ?touch: show the touch controls even on a device with a mouse (M16.1, for testing). */
+  touch: boolean;
 }
 
 /** Room-code alphabet (PLAN §8.1): no I, O, 0, 1. */
@@ -97,6 +99,7 @@ export function parseFlags(search: string, hash = ''): Flags {
     autoplace: params.has('autoplace') && truthy(params.get('autoplace')),
     shot: num(params.get('shot')),
     place: num(params.get('place')),
+    touch: params.has('touch') && truthy(params.get('touch')),
   };
 }
 

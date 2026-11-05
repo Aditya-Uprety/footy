@@ -18,12 +18,14 @@ import type { KickResult, Outcome, SimEvent, Team } from '../sim/types';
 import { buildWorld } from '../sim/world';
 import { h } from '../ui/dom';
 import { createKickPanel } from '../ui/kickPanel';
+import { createTouchBar, isTouchUi } from '../ui/touchBar';
 import { createAimController } from './aimController';
 import { createInspectView } from './inspect';
 import { createMapControls } from './mapControls';
 import { audio } from './audio';
 import { createKickFlow, type FlowPhase } from './kickFlow';
 import { createReplayControls } from './replayControls';
+import { getFlags } from './router';
 import { kickoffTurn, nextPracticeTurn, practiceLayout, type PracticePlayer, type PracticeTurn } from './practiceRules';
 
 export interface PracticeOptions {
@@ -141,6 +143,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
   }
 
   // ---- HUD -----------------------------------------------------------------
+  const touchUi = isTouchUi(getFlags().touch);
   const hud = {
     root: h('div', { class: 'panel practice-hud', 'data-screen': 'practice' }),
     possession: h('div', { class: 'ph-possession' }),
@@ -159,11 +162,16 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
     hud.last,
     hud.score,
     h('div', { class: 'ph-row' }, newLayoutBtn, hud.seed),
-    h(
-      'p',
-      { class: 'ph-keys' },
-      'Drag or ← → turn (Shift fine) · ↑ ↓ look · wheel or + − zoom · hold Tab map · Space kick · hold F fast · C camera · R replay',
-    ),
+    // The key list is for keyboards; on touch the buttons and gestures speak for themselves.
+    ...(touchUi
+      ? []
+      : [
+          h(
+            'p',
+            { class: 'ph-keys' },
+            'Drag or ← → turn (Shift fine) · ↑ ↓ look · wheel or + − zoom · hold Tab map · Space kick · hold F fast · C camera · R replay',
+          ),
+        ]),
   );
   const toastEl = h('div', { class: 'toast', hidden: true });
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -189,7 +197,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
     const p = flow.phase;
     hud.possession.textContent = p === 'aim' || p === 'transition' ? possessionText() : p === 'windup' ? 'Kick!' : p === 'replay' ? 'Replaying the last kick…' : 'Ball in play…';
     hud.possession.className = `ph-possession team-${turn.team}`;
-    hud.last.textContent = lastText ? `Last kick: ${lastText}` : 'Aim with the mouse or arrow keys, then kick.';
+    hud.last.textContent = lastText ? `Last kick: ${lastText}` : touchUi ? 'Drag to turn, pinch to zoom, then kick.' : 'Aim with the mouse or arrow keys, then kick.';
     hud.score.textContent = `Goals  Red ${score[0]} · Blue ${score[1]}  ·  kicks ${kicks}`;
     hud.seed.textContent = `layout ?seed=${seed}`;
   }
@@ -218,6 +226,16 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
   });
   const showMap = (on: boolean): void => maps.show(on);
   const replayControls = createReplayControls({ stage, flow, overlay: opts.overlay, covered: () => maps.shown });
+  const touchBar = touchUi
+    ? createTouchBar({
+        overlay: opts.overlay,
+        top: '162px',
+        onMap: showMap,
+        onFast: (on) => flow.setFastForward(on),
+        onCamera: () => flow.toggleCamera(),
+        onHeight: (d) => aim.setHeight(aim.state.height + d),
+      })
+    : null;
 
   function newLayout(s = randomSeed()): void {
     flow.forgetLast();
@@ -271,6 +289,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
       if (toastTimer) clearTimeout(toastTimer);
       help.dispose();
       replayControls.dispose();
+      touchBar?.dispose();
       maps.dispose();
       flow.dispose();
       panel.dispose();

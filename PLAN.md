@@ -149,7 +149,7 @@ Versions seen on npm at planning time (pin exact versions in M0): three 0.187.0,
 - **Practice** `#/practice`: solo sandbox with a random layout; possession switching only (no rules engine).
 - **Physics Lab** `#/lab`: dev tool; the **only** place debug trajectory lines may appear.
 
-Query flags: `?debug` (hitboxes, FPS/draw calls, ruler, `window.__footy`), `?seed=N` (deterministic RNG), `?autoplace` (auto-fills a legal draft), `?shot=N` / `?place=N` (shot / placement timer seconds, 0 = off; hot-seat and the online host, until the M13 settings panel).
+Query flags: `?debug` (hitboxes, FPS/draw calls, ruler, `window.__footy`), `?seed=N` (deterministic RNG), `?autoplace` (auto-fills a legal draft), `?shot=N` / `?place=N` (initial shot / placement timer seconds, 0 = off), `?touch` (show the touch button row on a mouse device, M16.1; the larger slider handles follow `(pointer: coarse)`).
 
 ### 3.4 Data flow of one kick
 ```
@@ -216,7 +216,7 @@ footy/
    ├─ ui/                          # DOM overlays
    │  ├─ dom.ts  styles.css
    │  ├─ menu.ts  lobby.ts  toss.ts  placementPanel.ts  kickPanel.ts
-   │  └─ hud.ts  minimap.ts  screens.ts  help.ts  helpOverlay.ts  kitTheme.ts  settingsPanel.ts  soundControl.ts  matchLog.ts
+   │  └─ hud.ts  minimap.ts  screens.ts  help.ts  helpOverlay.ts  kitTheme.ts  settingsPanel.ts  soundControl.ts  matchLog.ts  touchBar.ts
    └─ app/                         # glue per mode
       ├─ router.ts  session.ts     # Session interface + LocalSession
       ├─ inspect.ts                # M1 inspect view: pitch + goals, orbit camera, keys 1–4, ?debug axes/ruler
@@ -421,6 +421,8 @@ Consequence for balance: the maximum carry (~53 m) only just reaches a goal from
 | Replay speed 1× · ½× · ¼× / again | Bar buttons | 1 2 3 / Space |
 | Match log and stats | L button | L |
 | Help | ? button | H |
+
+Touch (M16.1, `ui/touchBar.ts`; on `(pointer: coarse)` devices or with `?touch`): one finger drags the view (same 0.15°/px), two fingers pinch to zoom (FOV), and a button row gives hold-**Map** (Tab), hold-**Fast** (F), **Cam** (C) and camera **Up / Down** (±0.5 m); sliders get bigger handles, a double tap on the Curve slider resets it to 0.
 
 Sensitivity: drag 0.15°/px (Shift 0.03°/px); keys 40°/s (Shift 6°/s). Slider steps: power 1 %, curve 1 %, loft 0.5°. Tab and Space must `preventDefault`.
 
@@ -826,3 +828,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 - 2026-11-05 — M15.2: after a **counted goal** (not a disallowed throw-in goal, not at half-time or full-time) both devices automatically replay it over the restart view: `kickFlow.startReplay({ auto: true })` — 1× only (so the host guard's 15 s grace is never at risk), camera choice kept (C / bar), closes itself 0.8 s after the ball stops (hard cap 12 s) or on **Skip** (button, R, Esc, Space). The restart whistle and the kicker's shot timer start when it ends. `app/replayModel.ts` has `wantsGoalReplay`, `AUTO_REPLAY_HOLD/MAX`. No rules or constants changed.
 - 2026-11-05 — M15.3: **Match log and stats.** `GameState.log` (new, required on the wire; `isGameState` checks it) gets one compact `KickLogEntry` per kick from `resolveOutcome` (kick number, half, team, kicker id or ghost, restart taken, result goal / nogoal / touch / goalline / catch / stop, scorer, own goal, shot 0/1/2, keeper, awarded restart + who takes it). `game/matchLog.ts` `matchStats(log)` gives per team: goals, shots, shots on target, saves, corners, kicks, possession %. Definitions: a **shot** is a kick by T that ended in the opponent's goal (counted or not), in a catch by the opponent's keeper (= a **save**, credited to the keeper's team), or over the opponent's goal line (off target); **possession %** = share of all kicks taken (each kick is a turn with the ball). Shown on the full-time card (stats table + collapsible kick list) and in an in-match panel (**L** or the L button, Esc/Close hides). Both read the *shown* state, so nothing appears before its playback ends. No rules or constants changed.
 - 2026-11-05 — M15.4: **Remembered names and settings.** `app/userPrefs.ts` keeps hot-seat names, the online name (host and join share it) and the last match settings (incl. kit pair) in localStorage `footy-prefs`, per device and guarded like the sound prefs. They prefill the hot-seat setup, the host lobby and the join lobby; query flags (`?shot=`, `?place=`, …) still override the saved settings for that visit. The guest never stores the host's settings. Nothing is synced or sent. No rules or constants changed.
+- 2026-11-05 — M16.1: **Touch controls.** `app/aimController.ts` tracks pointers: one finger = the mouse drag, two fingers = pinch zoom (`pinchFov`; spreading zooms in; lifting a finger ends the pinch without turning the view). `ui/touchBar.ts` (shown on `(pointer: coarse)` or with the new `?touch` flag) adds hold-Map, hold-Fast, Cam and height Up/Down buttons to the match and Practice views; the slider handles are larger on coarse pointers and a double tap on the Curve slider resets it. Nothing about the aim is shown. The bar sits in a compact row under the Menu / ? / L buttons; M16.2 tunes the full landscape layout. `scripts/webgl-shot.mjs` gained touch steps (`tap`, `tdrag`, `pinch`, `thold`/`trelease`, `TOUCH=1`). No rules or constants changed.

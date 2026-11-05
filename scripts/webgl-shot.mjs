@@ -20,7 +20,14 @@
 //                             returning [x, y] / [x1, y1, x2, y2] or {x, y}
 //                             (e.g. jsclick:__placement.screenOf(-20, 5))
 //   shot:<file.png>           extra screenshot mid-sequence
-// Env: CHROME (binary), SIZE (default 1280x720).
+// Touch steps (set TOUCH=1: touch + coarse-pointer emulation, like a phone):
+//   tap:x,y                   one-finger tap
+//   tdrag:x1,y1,x2,y2         one-finger drag
+//   pinch:cx,cy,d1,d2         two fingers around (cx,cy), distance d1 -> d2 (px, horizontal)
+//   thold:x,y                 put a finger down and keep it there (finger id 1)
+//   trelease                  lift the finger put down by thold
+//   (js variants: jstap, jsthold, jstdrag take coordinates from a JS expression)
+// Env: CHROME (binary), SIZE (default 1280x720), TOUCH=1.
 // Exit code 1 if the page logged an error or threw.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -115,7 +122,9 @@ async function main() {
   await send('Runtime.enable');
   await send('Log.enable');
   await send('Page.enable');
-  await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
+  const touchMode = process.env.TOUCH === '1';
+  await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: touchMode });
+  if (touchMode) await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
   await send('Page.navigate', { url });
   await sleep(2500);
 
@@ -132,6 +141,26 @@ async function main() {
     }
     await mouse('mouseReleased', x2, y2, { button, buttons, clickCount: 1 });
   };
+  const touch = (type, points) =>
+    send('Input.dispatchTouchEvent', { type, touchPoints: points.map((p, i) => ({ x: p.x, y: p.y, id: p.id ?? i + 1 })) });
+  const tdrag = async (x1, y1, x2, y2) => {
+    await touch('touchStart', [{ x: x1, y: y1 }]);
+    for (let i = 1; i <= 12; i++) {
+      const t = i / 12;
+      await touch('touchMove', [{ x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t }]);
+      await sleep(16);
+    }
+    await touch('touchEnd', []);
+  };
+  const pinch = async (cx, cy, d1, d2) => {
+    const two = (d) => [{ x: cx - d / 2, y: cy, id: 1 }, { x: cx + d / 2, y: cy, id: 2 }];
+    await touch('touchStart', two(d1));
+    for (let i = 1; i <= 12; i++) {
+      await touch('touchMove', two(d1 + ((d2 - d1) * i) / 12));
+      await sleep(16);
+    }
+    await touch('touchEnd', []);
+  };
   const shot = async (file) => {
     const { data } = await send('Page.captureScreenshot', { format: 'png' });
     writeFileSync(file, Buffer.from(data, 'base64'));
@@ -140,7 +169,7 @@ async function main() {
 
   for (const raw of steps) {
     let step = raw;
-    if (/^js(click|sclick|rclick|move|drag|rdrag):/.test(step)) {
+    if (/^js(click|sclick|rclick|move|drag|rdrag|tap|thold|tdrag):/.test(step)) {
       const j = step.indexOf(':');
       const r = await send('Runtime.evaluate', { expression: step.slice(j + 1), returnByValue: true });
       const v = r.result.value;
@@ -148,8 +177,8 @@ async function main() {
       step = `${step.slice(2, j)}:${arr.map((n) => Math.round(n)).join(',')}`;
     }
     const i = step.indexOf(':');
-    const kind = step.slice(0, i);
-    const arg = step.slice(i + 1);
+    const kind = i < 0 ? step : step.slice(0, i);
+    const arg = i < 0 ? '' : step.slice(i + 1);
     const nums = () => arg.split(',').map(Number);
     if (kind === 'wait') await sleep(Number(arg));
     else if (kind === 'eval') {
@@ -166,7 +195,18 @@ async function main() {
       await mouse('mouseMoved', x, y, { modifiers });
       await mouse('mousePressed', x, y, { button: 'left', buttons: 1, clickCount: 1, modifiers });
       await mouse('mouseReleased', x, y, { button: 'left', buttons: 1, clickCount: 1, modifiers });
-    } else if (kind === 'rclick') {
+    } else if (kind === 'tap') {
+      const [x, y] = nums();
+      await touch('touchStart', [{ x, y }]);
+      await sleep(40);
+      await touch('touchEnd', []);
+    } else if (kind === 'tdrag') await tdrag(...nums());
+    else if (kind === 'pinch') await pinch(...nums());
+    else if (kind === 'thold') {
+      const [x, y] = nums();
+      await touch('touchStart', [{ x, y }]);
+    } else if (kind === 'trelease') await touch('touchEnd', []);
+    else if (kind === 'rclick') {
       const [x, y] = nums();
       await mouse('mouseMoved', x, y);
       await mouse('mousePressed', x, y, { button: 'right', buttons: 2, clickCount: 1 });

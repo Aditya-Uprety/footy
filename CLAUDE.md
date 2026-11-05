@@ -42,7 +42,7 @@ Always end with exactly this block:
 Model guide (PLAN.md §12): **Opus 5.5 · High** for core build work (M0–M10, M17); **Sonnet 5.5 · High** for deploy and polish (M11–M16).
 
 ## Commands
-- `npm run dev`: dev server at http://localhost:5173 (routes: `#/`, `#/hotseat`, `#/host`, `#/join/CODE`, `#/practice`, `#/lab`; flags `?debug`, `?seed=N`, `?autoplace`, `?shot=N`, `?place=N`)
+- `npm run dev`: dev server at http://localhost:5173 (routes: `#/`, `#/hotseat`, `#/host`, `#/join/CODE`, `#/practice`, `#/lab`; flags `?debug`, `?seed=N`, `?autoplace`, `?shot=N`, `?place=N`, `?touch`)
 - `npm run check`: typecheck + unit tests (must pass before ticking a task)
 - `npm run build` / `npm run preview`: production build
 - `npm run sim:table`: physics tuning report (from M2)
