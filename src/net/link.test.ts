@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GuestLink, HELLO_TIMEOUT_MS, HostLink, PING_MS, SILENCE_MS, type GuestLinkStatus, type HostLinkEvent } from './link';
+import { sanitizeSettings, type Settings } from '../game/settings';
 import { msg, type GuestMessage, type HostMessage } from './protocol';
 import { LoopbackHub, type LoopbackTransport, type Transport } from './transport';
 
@@ -233,5 +234,45 @@ describe('seat reservation and resume (§8.5)', () => {
     const b = join('B');
     await step();
     expect(b.last()).toMatchObject({ kind: 'connected' });
+  });
+});
+
+describe('lobby settings sync (M13.3)', () => {
+  const custom = sanitizeSettings({ kicksPerMatch: 10, shotTimerSec: 0, pitchLength: 100 });
+
+  it('a guest that joins gets the host settings with the welcome', async () => {
+    const { host, join } = setup();
+    host.setSettings(custom);
+    const g = join();
+    const seen: Settings[] = [];
+    g.link.onSettings((s) => seen.push(s));
+    await step();
+    expect(g.link.settings).toEqual(custom);
+    expect(g.msgs).toEqual([]); // settings never reach the game-message listeners
+  });
+
+  it('changes before the match reach a connected guest at once', async () => {
+    const { host, join } = setup();
+    const g = join();
+    const seen: Settings[] = [];
+    g.link.onSettings((s) => seen.push(s));
+    await step();
+    expect(g.link.settings).toBeNull();
+    host.setSettings(custom);
+    host.setSettings({ ...custom, kicksPerMatch: 20 });
+    await step();
+    expect(seen.map((s) => s.kicksPerMatch)).toEqual([10, 20]);
+    expect(g.link.settings?.kicksPerMatch).toBe(20);
+  });
+
+  it('a malformed settings message is dropped', async () => {
+    const { hostTransports, join } = setup();
+    const g = join();
+    const seen: Settings[] = [];
+    g.link.onSettings((s) => seen.push(s));
+    await step();
+    hostTransports[0]!.send({ v: 1, t: 'settings', settings: { kicksPerMatch: 'many' } });
+    await step();
+    expect(seen).toEqual([]);
   });
 });

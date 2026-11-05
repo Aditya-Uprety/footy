@@ -770,3 +770,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .help-keys td:first-child { color: var(--fg); font-weight: 600; }
 kbd { display: inline-block; padding: 1px 7px; border-radius: var(--radius-sm); border: 1px solid var(--panel-border); background: var(--surface-2); font: 12px/1.5 var(--mono); color: var(--fg); }
 @media (max-width: 560px) { .help-keys th:nth-child(2), .help-keys td:nth-child(2) { display: none; } }
+
+/* ---- Match settings panel (M13.3) ---- */
+.settings { margin: 4px 0 14px; border: 1px solid var(--panel-border); border-radius: var(--radius); background: var(--surface-1); }
+.settings > summary { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; cursor: pointer; list-style: none; font-size: 14px; }
+.settings > summary::-webkit-details-marker { display: none; }
+.settings > summary::before { content: '▸'; position: absolute; right: 14px; color: var(--fg-dim); }
+.settings { position: relative; }
+.settings[open] > summary::before { content: '▾'; }
+.settings-summary { color: var(--fg-dim); font-size: 12.5px; }
+.settings-body { display: flex; flex-direction: column; gap: 6px; padding: 4px 12px 12px; border-top: 1px solid var(--panel-border); }
+.settings-row { display: grid; grid-template-columns: 8.5em 1fr 4.6em; align-items: center; gap: 8px; font-size: 13px; }
+.settings-label { color: var(--fg-dim); font-weight: 600; }
+.settings-control { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.settings-range { flex: 1; min-width: 0; accent-color: var(--accent); }
+.settings-range:disabled { opacity: 0.4; }
+.settings-toggle { accent-color: var(--accent); }
+.settings-value { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.settings-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.settings-note { color: var(--fg-dim); font-size: 12px; }
+@media (max-width: 480px) { .settings-row { grid-template-columns: 1fr 4.6em; } .settings-control { grid-column: 1 / -1; order: 3; } }

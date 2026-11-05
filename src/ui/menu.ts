@@ -2,7 +2,9 @@
 // (M9), Practice, How to play (M13.2) and (dev builds) the Physics Lab.
 import { defaultName, NAME_MAX } from '../game/rules';
 import type { Seat } from '../game/types';
+import { sanitizeSettings, type Settings } from '../game/settings';
 import { h } from './dom';
+import { createSettingsPanel } from './settingsPanel';
 
 export interface MenuOptions {
   /** Show the Physics Lab entry (dev builds and ?debug). */
@@ -34,7 +36,9 @@ export function menuScreen(opts: MenuOptions): HTMLElement {
 export interface SetupOptions {
   /** Prefilled names. */
   names?: [string, string];
-  onStart(names: [string, string]): void;
+  /** Prefilled match settings (default: the defaults). */
+  settings?: Settings;
+  onStart(names: [string, string], settings: Settings): void;
 }
 
 /** Hot-seat setup: two names → Start (Enter also starts). Empty names fall back to Player 1 / Player 2. */
@@ -50,12 +54,14 @@ export function hotseatSetupScreen(opts: SetupOptions): HTMLElement {
       spellcheck: 'false',
     });
   const inputs = [field(0), field(1)] as const;
+  const panel = createSettingsPanel({ settings: opts.settings ?? sanitizeSettings({}), editable: true });
   const form = h(
     'form',
     { class: 'setup-form' },
     ...inputs.map((input, seat) =>
       h('label', { class: 'setup-field' }, h('span', {}, `Player ${seat + 1}`), input),
     ),
+    panel.el,
     h('p', { class: 'setup-note' }, 'A coin toss decides who picks a side. Then you take turns placing players on this screen.'),
     h(
       'div',
@@ -66,7 +72,7 @@ export function hotseatSetupScreen(opts: SetupOptions): HTMLElement {
   );
   form.addEventListener('submit', (ev) => {
     ev.preventDefault();
-    opts.onStart([inputs[0].value, inputs[1].value]);
+    opts.onStart([inputs[0].value, inputs[1].value], panel.get());
   });
   const root = h('div', { class: 'panel card setup', 'data-screen': 'hotseat-setup' }, h('h1', {}, 'Hot-seat match'), form);
   queueMicrotask(() => inputs[0].focus());

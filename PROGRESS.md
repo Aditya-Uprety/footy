@@ -5,11 +5,11 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M13 — UI/UX polish and settings (M13.1–M13.2 done) (M0–M12 done)
-- **Next task:** M13.3 Lobby settings panel synced to guest
+- **Current milestone:** M13 — UI/UX polish and settings (M13.1–M13.3 done) (M0–M12 done)
+- **Next task:** M13.4 Team names, kit colors, key-binding help
 - **Model for next task:** Sonnet 5.5 · High effort
 - **Last updated:** 2026-11-05 (M12.A done; M12 complete; live at https://aditya-uprety.github.io/footy/; two-device check on the user's Wi-Fi from M10 still to do by the user)
-- **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
+- **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes). M13 stopped after M13.3 to keep the chat short; see the M13.3 note for M13.4 hints.
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
 - [x] M0.1 npm project: Vite + TS strict + three + vitest, pinned versions, scripts, .gitignore
@@ -119,7 +119,7 @@
 ## M13 — UI/UX polish and settings · Sonnet 5.5 High
 - [x] M13.1 Consistent theme across all screens
 - [x] M13.2 How-to-play screen
-- [ ] M13.3 Lobby settings panel synced to guest
+- [x] M13.3 Lobby settings panel synced to guest
 - [ ] M13.4 Team names, kit colors, key-binding help
 - [ ] M13.A Acceptance checks passed and reported to the user
 
@@ -180,3 +180,4 @@
 - 2026-11-05 — M12.A: headless-Chrome visual review of hot-seat/practice/Lab views (22 players, stadium, grass, ball close-up): no console errors, 120 draw calls max, `npm run check` green (387 tests). The one thing I cannot verify: ≥ 60 fps at 1080p on the user's real GPU (headless SwiftShader is software); the user checks it via `?debug`. If it is below 60, tell the next chat: first levers are shadow map size (4096 → 2048), DPR cap, crowd density (`crowdDensity`) — M16.3 adds a performance mode anyway.
 - 2026-11-05 — M13.1: `ui/styles.css` now starts with one token block (surfaces, text, accent, ok/bad/info, `--team-0` / `--team-1` + `-light` variants, radii, mono font, shadow, ease); every hardcoded color and the duplicate button rules were replaced by tokens. Team colors in CSS are variables: **M13.4 should write kit colors into `--team-0` / `--team-1` at runtime** (the 3D side reads `KIT_COLORS` in `render/players.ts`). Lab and Practice buttons now use `.btn .btn-sm`; cards animate in; `prefers-reduced-motion` respected; focus rings are global. Verified with webgl-shot (menu, hot-seat draft, practice): no console errors; `npm run check` 387 tests green.
 - 2026-11-05 — M13.2: `#/howto` (`ui/help.ts`: `RULE_SECTIONS`, `KEY_ROWS`, `PLACEMENT_ROWS`, `controlsTable()`, `howToPlayScreen()`); router, menu entry and `help.test.ts` added. The key table already lists **H = this help**: M13.4 must implement the in-match H overlay (reuse `controlsTable()`). Verified with webgl-shot: no console errors; 390 tests green.
+- 2026-11-05 — M13.3: `ui/settingsPanel.ts` (`createSettingsPanel`, `changeSetting`, `settingsSummary`, `SETTING_META`; a collapsible `<details>` with a slider per `Settings` field, on/off checkbox for the two timers, Reset to defaults, read-only mode) is used by the hot-seat setup (`hotseatSetupScreen({ settings, onStart(names, settings) })`; the chosen settings survive a restart of the setup), the host lobby (`createHostLobby({ settings, onSettings })`, `lobby.settings()`) and the guest lobby (`lobby.setSettings(s | null)`, hidden when the host is gone). Query flags (`?shot`, `?place`, …) are now only the *initial* values. Sync = protocol §8.2 additions (still v1, additive): `welcome.settings?` and a host→guest `settings` message; `HostLink.setSettings(s)` / `.settings`, `GuestLink.settings` / `.onSettings(cb)` (handled inside the link, never reaches `GuestSession`). `startMatch` uses the panel's current settings; both devices then read `state.settings` as before. Verified: webgl-shot of the hot-seat setup panel; two pane tabs on the real PeerJS server (guest sees the host's values read-only, live changes arrive within a second, both `__online.session.state.settings` equal after Start; only the expected WebGL console errors); new tests: link sync (3), panel model, 10-kick HostCore match (half-time after 5, full-time after 10). `npm run check` 397 tests green. **For M13.4:** kit colors flow from `render/players.ts` `KIT_COLORS` (3D, minimap, overhead map, placement overlay) and `matchText.ts` `TEAM_KIT` names ('Red'/'Blue', also `placementPanel.ts` `KIT_NAME`); in CSS they are `--team-0` / `--team-1`. Online both devices must show the same kits, so put the chosen kit pair (an index into a `KIT_PAIRS` list) into `Settings` (add to `isSettings`, `SETTING_RANGES`/sanitize, the panel) rather than a new message; team names = seat names (already editable); the H overlay should reuse `ui/help.ts` `controlsTable()`.

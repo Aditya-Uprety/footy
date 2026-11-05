@@ -200,4 +200,22 @@ describe('scripted full match through HostCore (M6.6)', () => {
       `Restarts: ${[...new Set(awarded)].join(', ')}.`,
     );
   });
+
+  it('a 10-kick match (M13.3 setting) has half-time after 5 and full-time after 10', () => {
+    const { core, kicks } = host({ kicksPerMatch: 10 }, 99);
+    draftVia(core);
+    const rng = createRng(5);
+    const halves: number[] = [];
+    while (core.state.phase === 'play') {
+      const s = core.state;
+      const input = { yaw: defaultYaw(s) + rng.range(-0.3, 0.3), power: rng.range(0.3, 1), curve: 0, loft: rng.range(0, 0.5) };
+      expect(core.handle(activeSeat(s)!, { type: 'kick', turnId: s.turnId, input, auto: false })).toEqual({ ok: true });
+      const next = kicks.at(-1)!.next;
+      if (next.half === 2 && halves.length === 0) halves.push(next.kicksTaken);
+    }
+    expect(halves).toEqual([5]);
+    expect(core.state.phase).toBe('fulltime');
+    expect(core.state.kicksTaken).toBe(10);
+    expect(kicks).toHaveLength(10);
+  });
 });

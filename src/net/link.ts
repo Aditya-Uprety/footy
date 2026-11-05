@@ -6,6 +6,7 @@
 // silence. GuestLink does the guest half: hello → welcome/reject, ping/pong,
 // silence → lost. Game messages (state, kick, intent, aim, denied) pass
 // through untouched; M10's HostSession / GuestSession build on these.
+import type { Settings } from '../game/settings';
 import {
   msg,
   parseGuestMessage,
@@ -94,6 +95,7 @@ export class HostLink {
   private closed = false;
   name: string;
   reserveMs: number;
+  private _settings: Settings | null = null;
 
   constructor(
     private readonly listener: Listener,
@@ -115,6 +117,17 @@ export class HostLink {
 
   get connected(): boolean {
     return this.seat?.t != null;
+  }
+
+  /** The lobby settings the guest is shown (M13.3); null = none announced. */
+  get settings(): Settings | null {
+    return this._settings;
+  }
+
+  /** Remembers the settings, sends them to the connected guest, and puts them in later welcomes. */
+  setSettings(s: Settings): void {
+    this._settings = { ...s };
+    this.send(msg('settings', { settings: this._settings }));
   }
 
   on(cb: (e: HostLinkEvent) => void): () => void {
@@ -239,7 +252,15 @@ export class HostLink {
     const token = resume && s ? s.token : this.token();
     const name = m.name.trim().slice(0, 32);
     this.seat = { t, name, token, rtt: null, lastSeen: now, droppedAt: null };
-    t.send(msg('welcome', { seat: 1, resume: token, proto: PROTOCOL_VERSION, name: this.name }));
+    t.send(
+      msg('welcome', {
+        seat: 1,
+        resume: token,
+        proto: PROTOCOL_VERSION,
+        name: this.name,
+        ...(this._settings ? { settings: this._settings } : {}),
+      }),
+    );
     this.emit({ kind: 'join', name, resume });
     this.ping();
   }
@@ -308,6 +329,9 @@ export class GuestLink {
   token: string | null;
   hostName = '';
   rtt: number | null = null;
+  /** The host's lobby settings (M13.3), null until announced. */
+  settings: Settings | null = null;
+  private readonly settingsCbs = new Set<(s: Settings) => void>();
 
   constructor(
     private readonly t: Transport,
@@ -347,6 +371,12 @@ export class GuestLink {
     return () => this.msgCbs.delete(cb);
   }
 
+  /** Called with the host's settings on the welcome and whenever the host changes them. */
+  onSettings(cb: (s: Settings) => void): () => void {
+    this.settingsCbs.add(cb);
+    return () => this.settingsCbs.delete(cb);
+  }
+
   send(m: GuestMessage): void {
     if (this.connected) this.t.send(m);
   }
@@ -379,8 +409,14 @@ export class GuestLink {
       case 'welcome':
         this.token = m.resume;
         this.hostName = m.name ?? '';
+        if (m.settings) this.settings = m.settings;
         this.set({ kind: 'connected', rtt: this.rtt, hostName: this.hostName });
+        if (m.settings) this.emitSettings(m.settings);
         this.ping();
+        return;
+      case 'settings':
+        this.settings = m.settings;
+        this.emitSettings(m.settings);
         return;
       case 'reject':
         this.end({ kind: 'rejected', reason: m.reason });
@@ -398,6 +434,10 @@ export class GuestLink {
       default:
         if (st === 'connected') for (const cb of [...this.msgCbs]) cb(m);
     }
+  }
+
+  private emitSettings(s: Settings): void {
+    for (const cb of [...this.settingsCbs]) cb(s);
   }
 
   private ping(): void {

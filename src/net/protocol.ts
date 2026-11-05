@@ -31,8 +31,10 @@ export type GuestMessage =
 
 /** Host → guest. */
 export type HostMessage =
-  | { v: 1; t: 'welcome'; seat: 1; resume: string; proto: number; name?: string }
+  | { v: 1; t: 'welcome'; seat: 1; resume: string; proto: number; name?: string; settings?: Settings }
   | { v: 1; t: 'reject'; reason: RejectReason }
+  /** The host's lobby settings (M13.3): sent after the welcome and on every change before the match starts. */
+  | { v: 1; t: 'settings'; settings: Settings }
   | { v: 1; t: 'state'; state: GameState }
   | { v: 1; t: 'kick'; result: WireKickResult; next: GameState }
   | { v: 1; t: 'aim'; turnId: number; yaw: number }
@@ -319,9 +321,15 @@ export function parseHostMessage(x: unknown): HostMessage | null {
   if (!hasVersion(x)) return null;
   switch (x.t) {
     case 'welcome':
-      return x.seat === 1 && isStr(x.resume, MAX_TOKEN_LEN) && isInt(x.proto) && (x.name === undefined || isStr(x.name, MAX_NAME_LEN))
+      return x.seat === 1 &&
+        isStr(x.resume, MAX_TOKEN_LEN) &&
+        isInt(x.proto) &&
+        (x.name === undefined || isStr(x.name, MAX_NAME_LEN)) &&
+        (x.settings === undefined || isSettings(x.settings))
         ? (x as HostMessage)
         : null;
+    case 'settings':
+      return isSettings(x.settings) ? (x as HostMessage) : null;
     case 'state':
       return isGameState(x.state) ? (x as HostMessage) : null;
     case 'kick':

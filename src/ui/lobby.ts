@@ -2,7 +2,9 @@
 // Dumb DOM: app/online.ts drives them from the network links.
 import { defaultName, NAME_MAX } from '../game/rules';
 import { ROOM_CODE_LENGTH } from '../app/router';
+import type { Settings } from '../game/settings';
 import { h } from './dom';
+import { createSettingsPanel } from './settingsPanel';
 
 export type PillTone = 'wait' | 'ok' | 'bad';
 
@@ -50,16 +52,23 @@ export interface HostLobby {
   /** Shows an error with a Retry button (null clears it). */
   setError(text: string | null): void;
   setStartEnabled(on: boolean): void;
+  /** The match settings as set in the panel. */
+  settings(): Settings;
 }
 
 export interface HostLobbyOptions {
   name: string;
+  /** Initial match settings. */
+  settings: Settings;
+  /** The host changed a setting. */
+  onSettings(s: Settings): void;
   onRetry(): void;
   onStart(): void;
 }
 
 export function createHostLobby(o: HostLobbyOptions): HostLobby {
   const pill = createNetPill();
+  const settingsPanel = createSettingsPanel({ settings: o.settings, editable: true, onChange: (s) => o.onSettings(s) });
   const nameInput = nameField(0, o.name, 'Your name');
   const codeEl = h('div', { class: 'room-code', 'data-code': '' }, '·····');
   const linkEl = h('input', { class: 'room-link', type: 'text', readonly: true, value: '', 'aria-label': 'Invite link' });
@@ -108,6 +117,7 @@ export function createHostLobby(o: HostLobbyOptions): HostLobby {
       h('div', { class: 'lobby-link-row' }, linkEl, copyBtn),
       h('p', { class: 'lobby-hint' }, 'Send the link (or the code) to your opponent.'),
     ),
+    settingsPanel.el,
     pill.el,
     opponent,
     errorEl,
@@ -139,6 +149,7 @@ export function createHostLobby(o: HostLobbyOptions): HostLobby {
     setStartEnabled(on) {
       startBtn.disabled = !on;
     },
+    settings: () => settingsPanel.get(),
   };
 }
 
@@ -152,6 +163,8 @@ export interface JoinLobby {
   setCode(code: string): void;
   setHost(name: string | null): void;
   setError(text: string | null): void;
+  /** The host's settings (read-only); null hides the panel. */
+  setSettings(s: Settings | null): void;
 }
 
 export interface JoinLobbyOptions {
@@ -182,6 +195,8 @@ export function createJoinLobby(o: JoinLobbyOptions): JoinLobby {
     codeInput.value = codeInput.value.toUpperCase();
     if (pos !== null) codeInput.setSelectionRange(pos, pos);
   });
+  const settingsPanel = createSettingsPanel({ settings: {} as Settings, editable: false });
+  settingsPanel.el.hidden = true;
   const hostEl = h('p', { class: 'lobby-opponent' }, '');
   const errorEl = h('p', { class: 'lobby-error', hidden: true }, '');
   const joinBtn = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Join');
@@ -196,6 +211,7 @@ export function createJoinLobby(o: JoinLobbyOptions): JoinLobby {
     h('label', { class: 'setup-field' }, h('span', {}, 'Room code'), codeInput),
     pill.el,
     hostEl,
+    settingsPanel.el,
     errorEl,
     note,
     h('div', { class: 'card-actions' }, h('a', { class: 'btn', href: '#/' }, '← Menu'), h('span', { class: 'grow' }), leaveBtn, joinBtn),
@@ -224,10 +240,15 @@ export function createJoinLobby(o: JoinLobbyOptions): JoinLobby {
     setHost(name) {
       hostEl.textContent = name === null ? '' : `Host: ${name}`;
       note.hidden = name === null;
+      if (name === null) settingsPanel.el.hidden = true; // stale once the host is gone
     },
     setError(text) {
       errorEl.hidden = text === null;
       errorEl.textContent = text ?? '';
+    },
+    setSettings(s) {
+      settingsPanel.el.hidden = s === null;
+      if (s) settingsPanel.set(s);
     },
   };
 }

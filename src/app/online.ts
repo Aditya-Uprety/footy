@@ -35,7 +35,7 @@ export interface OnlineOptions {
   seed?: number | null;
   /** ?autoplace: random picks for this device's seat (test route). */
   autoplace?: boolean;
-  /** Setting overrides for the host's match (query flags until the M13 settings panel). */
+  /** Initial setting overrides for the host's match (query flags); the lobby panel can change them. */
   settings?: Partial<Settings>;
   overlay: HTMLElement;
 }
@@ -141,8 +141,15 @@ function hostMode(ctx: MatchCtx): OnlineMode {
   let session: HostSession | null = null;
   let match: MatchView | null = null;
   const overlay = overlayHelper(opts.overlay);
+  /** The match settings: query-flag overrides first, then whatever the host sets in the lobby panel. */
+  let settings: Settings = sanitizeSettings(opts.settings ?? {});
   const lobby = createHostLobby({
     name: '',
+    settings,
+    onSettings: (s) => {
+      settings = s;
+      link?.setSettings(s);
+    },
     onRetry: () => open(),
     onStart: () => startMatch(),
   });
@@ -186,6 +193,7 @@ function hostMode(ctx: MatchCtx): OnlineMode {
       }
     });
     link = new HostLink(r, { name: myName(), reserveMs: 0 });
+    link.setSettings(settings);
     link.on((e) => {
       if (session) {
         matchEvent(e.kind);
@@ -235,7 +243,7 @@ function hostMode(ctx: MatchCtx): OnlineMode {
     overlay.hide();
     ctx.releaseBackdrop();
     const seed = opts.seed ?? Math.floor(Math.random() * 0x7fffffff);
-    session = new HostSession({ link, settings: sanitizeSettings(opts.settings ?? {}), names: [myName(), guest.name], seed });
+    session = new HostSession({ link, settings: sanitizeSettings(settings), names: [myName(), guest.name], seed });
     match = createMatchView({ stage: ctx.stage, session, overlay: opts.overlay, debug: opts.debug, autoplace: opts.autoplace ?? false });
   }
 
@@ -374,6 +382,10 @@ function joinMode(ctx: MatchCtx): OnlineMode {
       if (link !== l || disposed) return;
       status(s);
     });
+    // The host's settings (read-only) arrive with the welcome and on every change.
+    l.onSettings((s) => {
+      if (link === l && !disposed && !match) lobby.setSettings(s);
+    });
     if (opts.debug || import.meta.env.DEV) {
       Object.assign(window, {
         __online: {
@@ -420,6 +432,7 @@ function joinMode(ctx: MatchCtx): OnlineMode {
         return;
       case 'connected':
         clearRetry();
+        if (link?.settings && !match) lobby.setSettings(link.settings);
         if (link?.token) writeResume(code, link.token);
         if (link) bindSession(link);
         overlay.hide();
