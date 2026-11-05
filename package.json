@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run test"
+    "check": "npm run typecheck && npm run test",
+    "sim:table": "node scripts/sim-table.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

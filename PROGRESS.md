@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M2 — Ball flight physics (M0, M1 done)
-- **Next task:** M2.6 `npm run sim:table` tuning report
+- **Next task:** M2.A Acceptance checks passed and reported to the user
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M2.5 done)
+- **Last updated:** 2026-11-05 (M2.6 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -34,7 +34,7 @@
 - [x] M2.3 `step.ts` (forces, bounce, rolling, stop)
 - [x] M2.4 `simulate.ts` (loop, frames, events)
 - [x] M2.5 Physics tests incl. all PLAN §5.10 ranges
-- [ ] M2.6 `npm run sim:table` tuning report
+- [x] M2.6 `npm run sim:table` tuning report
 - [ ] M2.A Acceptance checks passed and reported to the user
 
 ## M3 — Collisions, goals, outs, possession · Opus 5.5 High

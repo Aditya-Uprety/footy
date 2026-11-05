@@ -20,6 +20,7 @@ Turn-based 3D football in the browser (Three.js + Vite + TypeScript). Two player
 | `npm run preview` | Serve the production build at http://localhost:4173 |
 | `npm test` | Unit tests only (Vitest, Node) |
 | `npm run typecheck` | TypeScript only |
+| `npm run sim:table` | Physics tuning report: carry / apex / total / time for power × loft, and the PLAN §5.10 targets (exits non-zero if one is out of range) |
 
 ## Routes and flags
 

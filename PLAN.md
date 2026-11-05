@@ -167,6 +167,7 @@ footy/
 ├─ .github/workflows/deploy.yml    # GitHub Pages (M11)
 ├─ public/                         # static assets (sfx in M14)
 ├─ scripts/webgl-shot.mjs          # dev: headless Chrome (SwiftShader) screenshots + console check via CDP
+├─ scripts/sim-table.mjs           # `npm run sim:table` launcher (Vite runnerImport) → scripts/simTable.ts tuning report (M2.6)
 └─ src/
    ├─ main.ts                      # boot → router
    ├─ architecture.test.ts         # purity rule (§3.2)
@@ -182,6 +183,7 @@ footy/
    │  ├─ collide.ts                # primitives + generic response
    │  ├─ step.ts                   # one fixed step
    │  ├─ simulate.ts               # run → KickResult (frames, events, outcome)
+   │  ├─ analyze.ts                # flight stats (carry, apex, total, lateral@downrange) for tests and sim:table
    │  └─ *.test.ts
    ├─ game/                        # PURE rules
    │  ├─ types.ts  settings.ts     # GameState, Intent, Settings (+ defaults, ranges)
@@ -780,3 +782,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 - 2026-11-05 — Plan created in the planning chat. Decided with the user: placement anywhere except the center circle (GK in own box, 1 m line margin); the toss winner picks a role (A = first pick + kickoff, B = last pick); real set pieces (ghost-taker throw-ins and corners, goal kick to the keeper); keepers with a wider reach that catch; a loft slider 0–55°; 40 shared kicks with half-time after 20, draws allowed; 20 s shot timer that auto-kicks; 105×68 m, X = 8 m, Y = 4 m; ties go to the non-kicking team; no offside or fouls; view aids: zoom, adjustable camera height, hold-Tab map, minimap; desktop first, touch later. Physics constants sanity-checked with a throwaway simulation (§5.10).
 - 2026-11-05 — M0: the browser pane on the user's machine has no WebGL, so 3D checks use `scripts/webgl-shot.mjs` (headless Chrome + SwiftShader over CDP) alongside the pane (§4, §10). `Settings` + `DEFAULT_SETTINGS` were added early in `game/settings.ts` so no layer hardcodes 105/68 before M6.1; `base: './'` set already in M0 (M11.1 only needs to verify it). TypeScript 7.0.2 works; no fallback needed.
 - 2026-11-05 — M1: added `app/inspect.ts` to §4 (the shared inspect view used until each mode has its own). Sun shadows use `PCFShadowMap` + `shadow.radius` because three r187 removed `PCFSoftShadowMap`.
+- 2026-11-05 — M2: physics matches the §5.10 planning check with the §5.3 constants unchanged (P25 29.2 m, P50 55.7, P100 93.9; P100 L15 carry 36.2 / apex 3.0; L35 53.3 / 12.1; chip 12.2 / 3.3; curve 4.1 and 2.8 m). "Apex" in §5.10 means the ball-center height above the ground. Added `sim/analyze.ts` and `scripts/sim-table.mjs` + `scripts/simTable.ts` (§4). `step.ts` exposes the §5.5 phases (`integrate`, `collideGround`, `settleRolling`) so M3 inserts world collisions between them; `simulateKick({ input, origin, team, caps?, turnId?, consts? })` takes a `KickOrigin` (player with id/team/gk, or ghost ball spot) and optional constants for the Lab. Ghost ball spots: `kickoffSpot`, `cornerSpot`, `throwInSpot` in `kick.ts`.
