@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M4 — Playback renderer and Physics Lab (M0–M3 done)
-- **Next task:** M4.2 `render/players.ts` (placeholder players + `?debug` hitboxes)
+- **Next task:** M4.3 `render/playback.ts` (interpolation, events, time-warp)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M4.1 done)
+- **Last updated:** 2026-11-05 (M4.2 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -47,7 +47,7 @@
 
 ## M4 — Playback renderer and Physics Lab · Opus 5.5 High
 - [x] M4.1 Ball mesh, rotation, shadow
-- [ ] M4.2 Placeholder players + `?debug` hitboxes
+- [x] M4.2 Placeholder players + `?debug` hitboxes
 - [ ] M4.3 Playback (interpolation, events, time-warp)
 - [ ] M4.4 Chase + broadcast cameras (C toggles)
 - [ ] M4.5 Physics Lab `#/lab` (dummies, kick inputs, event log, lil-gui constants)
