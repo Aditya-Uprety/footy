@@ -46,12 +46,18 @@ function panelCenters(): { pent: THREE.Vector3[]; hex: THREE.Vector3[] } {
  * approximation of the truncated icosahedron's cells), with grey seams where
  * two cells meet.
  */
-function makePanelTexture(): THREE.CanvasTexture {
+function makePanelTextures(): { color: THREE.CanvasTexture; bump: THREE.CanvasTexture } {
   const canvas = document.createElement('canvas');
   canvas.width = TEX_W;
   canvas.height = TEX_H;
   const ctx = canvas.getContext('2d')!;
   const img = ctx.createImageData(TEX_W, TEX_H);
+  // Height map for the stitched seams: panels high, seams low.
+  const bumpCanvas = document.createElement('canvas');
+  bumpCanvas.width = TEX_W;
+  bumpCanvas.height = TEX_H;
+  const bumpCtx = bumpCanvas.getContext('2d')!;
+  const bumpImg = bumpCtx.createImageData(TEX_W, TEX_H);
   const { pent, hex } = panelCenters();
   const centers = [...pent.map((c) => ({ c, s: 1 / PENT_IN, pent: true })), ...hex.map((c) => ({ c, s: 1 / HEX_IN, pent: false }))];
   const d = new THREE.Vector3();
@@ -77,8 +83,15 @@ function makePanelTexture(): THREE.CanvasTexture {
           second = a;
         }
       }
-      const col = second - best < SEAM ? COLORS.seam : bestPent ? COLORS.pent : COLORS.hex;
+      const isSeam = second - best < SEAM;
+      const col = isSeam ? COLORS.seam : bestPent ? COLORS.pent : COLORS.hex;
       const o = (j * TEX_W + i) * 4;
+      // Soft shoulder next to the seam so the groove reads at a distance.
+      const h = isSeam ? 40 : second - best < SEAM * 2.2 ? 170 : 235;
+      bumpImg.data[o] = h;
+      bumpImg.data[o + 1] = h;
+      bumpImg.data[o + 2] = h;
+      bumpImg.data[o + 3] = 255;
       img.data[o] = col[0];
       img.data[o + 1] = col[1];
       img.data[o + 2] = col[2];
@@ -86,10 +99,13 @@ function makePanelTexture(): THREE.CanvasTexture {
     }
   }
   ctx.putImageData(img, 0, 0);
+  bumpCtx.putImageData(bumpImg, 0, 0);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
-  return tex;
+  const bump = new THREE.CanvasTexture(bumpCanvas);
+  bump.anisotropy = 4;
+  return { color: tex, bump };
 }
 
 /** Soft radial blob for the contact shadow. */
@@ -138,9 +154,15 @@ export function createBallView(opts: BallOptions = {}): BallView {
   const group = new THREE.Group();
   group.name = 'ball';
 
-  const tex = makePanelTexture();
+  const { color: tex, bump: bumpTex } = makePanelTextures();
   const geo = new THREE.SphereGeometry(r, 40, 28);
-  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.42, metalness: 0 });
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    bumpMap: bumpTex,
+    bumpScale: 0.6,
+    roughness: 0.42,
+    metalness: 0,
+  });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = 'ball-mesh';
   mesh.castShadow = true;
@@ -220,6 +242,7 @@ export function createBallView(opts: BallOptions = {}): BallView {
       geo.dispose();
       mat.dispose();
       tex.dispose();
+      bumpTex.dispose();
       blobGeo.dispose();
       blobMat.dispose();
       blobTex.dispose();

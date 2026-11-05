@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../game/settings';
 import { derivePitch, LAW1 } from '../shared/pitch';
-import { buildMarkings, stripeEdges } from './pitch';
+import { buildMarkings, grassDetailPixels, stripeEdges } from './pitch';
 
 const key = (x: number, z: number): string => `${x.toFixed(3)},${z.toFixed(3)}`;
 const fix0 = (v: number): number => (Math.abs(v) < 5e-4 ? 0 : v);
@@ -119,5 +119,41 @@ describe('stripeEdges', () => {
       expect((e.length - 1) % 2).toBe(0);
       for (let i = 0; i < e.length; i++) expect(e[i]! + e[e.length - 1 - i]!).toBeCloseTo(0, 9);
     }
+  });
+});
+
+describe('grassDetailPixels', () => {
+  const n = 64;
+  const px = grassDetailPixels(n);
+  const lum = (x: number, y: number): number => px[((y % n) * n + (x % n)) * 4]!;
+
+  it('is deterministic', () => {
+    expect(Array.from(grassDetailPixels(n))).toEqual(Array.from(px));
+  });
+
+  it('stays a bright, subtle multiplier (mean 0.8–0.95, never dark)', () => {
+    let sum = 0;
+    let min = 255;
+    for (let i = 0; i < n * n; i++) {
+      sum += px[i * 4]!;
+      min = Math.min(min, px[i * 4]!);
+    }
+    const mean = sum / (n * n) / 255;
+    expect(mean).toBeGreaterThan(0.8);
+    expect(mean).toBeLessThan(0.95);
+    expect(min / 255).toBeGreaterThan(0.6);
+  });
+
+  it('has real variation but no seam across the wrap-around edge', () => {
+    let seam = 0;
+    let inner = 0;
+    for (let k = 0; k < n; k++) {
+      seam += Math.abs(lum(n - 1, k) - lum(n, k)) + Math.abs(lum(k, n - 1) - lum(k, n));
+      inner += Math.abs(lum(31, k) - lum(32, k)) + Math.abs(lum(k, 31) - lum(k, 32));
+    }
+    expect(inner).toBeGreaterThan(0);
+    // The wrapped edge is statistically the same as any interior pixel pair.
+    expect(seam / inner).toBeGreaterThan(0.5);
+    expect(seam / inner).toBeLessThan(1.6);
   });
 });

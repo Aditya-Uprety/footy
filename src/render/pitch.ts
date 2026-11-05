@@ -8,7 +8,9 @@ export const APRON = 6;
 /** Target width of one mowing stripe, metres (the real width is fitted so each half has a whole number). */
 const STRIPE_TARGET = 5.5;
 /** Grass detail texture tile size, metres. */
-const DETAIL_TILE = 4;
+const DETAIL_TILE = 8;
+/** Grass detail texture resolution (texels per side; 8 m / 256 ≈ 3 cm per texel). */
+export const DETAIL_SIZE = 256;
 /** Radius of the dull outer ground beyond the apron (fades into the fog). */
 const OUTER_RADIUS = 1400;
 /** Markings sit this far above the grass (plus a polygon offset) to avoid z-fighting. */
@@ -153,27 +155,75 @@ function buildGrassGeometry(pitch: Pitch): THREE.BufferGeometry {
   return geo;
 }
 
-/** Subtle tileable luminance noise multiplied over the grass colors. */
-function createGrassDetailTexture(maxAnisotropy: number): THREE.DataTexture {
-  const N = 128;
-  const data = new Uint8Array(N * N * 4);
-  // Deterministic hash noise (no Math.random so screenshots are stable).
-  let s = 0x9e3779b9;
+/**
+ * Tileable grass luminance (RGBA bytes, `n × n`): broad soft patches (wear and
+ * moisture), mid-scale mottling, short blade streaks along x (the mowing
+ * direction) and fine speckle. Every layer wraps, so the texture tiles without
+ * seams. Deterministic (no Math.random), so screenshots stay stable.
+ */
+export function grassDetailPixels(n = DETAIL_SIZE, seed = 0x9e3779b9): Uint8Array {
+  let s = seed >>> 0 || 1;
   const rnd = (): number => {
     s ^= s << 13;
     s ^= s >>> 17;
     s ^= s << 5;
     return (s >>> 0) / 4294967296;
   };
-  for (let i = 0; i < N * N; i++) {
-    // Mostly near-white with fine blade-like speckles.
-    const v = 214 + Math.floor(rnd() * 41);
+  /** Wrapping value noise with `cells` lattice cells per side, smoothstep interpolated. */
+  const valueNoise = (cells: number): Float32Array => {
+    const lattice = new Float32Array(cells * cells);
+    for (let i = 0; i < lattice.length; i++) lattice[i] = rnd();
+    const out = new Float32Array(n * n);
+    for (let y = 0; y < n; y++) {
+      const fy = (y / n) * cells;
+      const y0 = Math.floor(fy);
+      const ty = fy - y0;
+      const sy = ty * ty * (3 - 2 * ty);
+      for (let x = 0; x < n; x++) {
+        const fx = (x / n) * cells;
+        const x0 = Math.floor(fx);
+        const tx = fx - x0;
+        const sx = tx * tx * (3 - 2 * tx);
+        const a = lattice[(y0 % cells) * cells + (x0 % cells)]!;
+        const b = lattice[(y0 % cells) * cells + ((x0 + 1) % cells)]!;
+        const c = lattice[((y0 + 1) % cells) * cells + (x0 % cells)]!;
+        const d = lattice[((y0 + 1) % cells) * cells + ((x0 + 1) % cells)]!;
+        out[y * n + x] = a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+      }
+    }
+    return out;
+  };
+  const patches = valueNoise(4);
+  const mottle = valueNoise(16);
+  // Blade streaks: long in x (a few texels), thin in z, wrapped.
+  const streaks = new Float32Array(n * n);
+  const blades = Math.floor((n * n) / 24);
+  for (let i = 0; i < blades; i++) {
+    const x = Math.floor(rnd() * n);
+    const y = Math.floor(rnd() * n);
+    const len = 3 + Math.floor(rnd() * 5);
+    const v = rnd() < 0.5 ? -1 : 1;
+    const w = 0.5 + rnd() * 0.5;
+    for (let k = 0; k < len; k++) {
+      const idx = y * n + ((x + k) % n);
+      streaks[idx] = streaks[idx]! + v * w * (1 - k / len);
+    }
+  }
+  const data = new Uint8Array(n * n * 4);
+  for (let i = 0; i < n * n; i++) {
+    const lum =
+      0.9 + (patches[i]! - 0.5) * 0.14 + (mottle[i]! - 0.5) * 0.08 + streaks[i]! * 0.05 + (rnd() - 0.5) * 0.15;
+    const v = Math.max(0, Math.min(255, Math.round(lum * 255)));
     data[i * 4] = v;
     data[i * 4 + 1] = Math.min(255, v + 4);
     data[i * 4 + 2] = v;
     data[i * 4 + 3] = 255;
   }
-  const tex = new THREE.DataTexture(data, N, N, THREE.RGBAFormat);
+  return data;
+}
+
+function createGrassDetailTexture(maxAnisotropy: number): THREE.DataTexture {
+  const tex = new THREE.DataTexture(grassDetailPixels(), DETAIL_SIZE, DETAIL_SIZE, THREE.RGBAFormat);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.magFilter = THREE.LinearFilter;
