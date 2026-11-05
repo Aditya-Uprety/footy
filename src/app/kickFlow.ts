@@ -11,10 +11,17 @@
 // next turn, which it gives with `startTurn`. Practice (M5.5) and the match
 // views (M8, M10) share this.
 //
-// Keys: hold F = 3× playback · C = chase ↔ broadcast.
+// Replay (M15.1): while aiming (or watching the other seat aim) R replays the
+// last kick through the same recorded frames — chase / broadcast / behind-goal
+// camera, 1× · ½× · ¼× — and then cuts back to the aim view. The shot timer
+// keeps running; the aim state is untouched.
+//
+// Keys: hold F = 3× playback · C = chase ↔ broadcast (replay: chase → broadcast
+// → behind goal) · R = replay the last kick / close the replay.
 import * as THREE from 'three';
 import type { BallView } from '../render/ball';
 import { createPlaybackCamera, type PlaybackCamMode } from '../render/cameras';
+import { goalSideOf, nextReplayCam, REPLAY_SPEEDS, snapReplaySpeed, type ReplayState } from './replayModel';
 import { KickPlayback } from '../render/playback';
 import type { Stage } from '../render/scene';
 import { angleDiff, easeInOutCubic } from '../shared/math';
@@ -67,7 +74,7 @@ export function kickerBlocksView(cx: number, cz: number, bx: number, bz: number,
   return px * px + pz * pz < KICKER_SIGHT_HALFWIDTH * KICKER_SIGHT_HALFWIDTH;
 }
 
-export type FlowPhase = 'idle' | 'aim' | 'windup' | 'playback' | 'hold' | 'transition';
+export type FlowPhase = 'idle' | 'aim' | 'windup' | 'playback' | 'hold' | 'transition' | 'replay';
 
 /** Who kicks next and from where. */
 export interface Turn {
@@ -112,6 +119,8 @@ export interface KickFlowOptions {
   /** Keeper position for the catch snap. */
   keeperAt?(id: number): { x: number; z: number } | null;
   onEvent?(ev: SimEvent, result: KickResult): void;
+  /** An event of a replayed kick (sounds only: the modes must not repeat toasts or scores). */
+  onReplayEvent?(ev: SimEvent, result: KickResult): void;
   onPhase?(phase: FlowPhase): void;
   /** Per-viewer setting (§2.9), default on. */
   autoSlowRolls?: boolean;
@@ -130,6 +139,22 @@ export interface KickFlow {
   readonly spectatorBroadcast: boolean;
   /** Spectator: the kicker's latest streamed yaw; the view eases toward it. */
   followYaw(yaw: number): void;
+  /** True once a kick has been played here, so R has something to replay. */
+  readonly canReplay: boolean;
+  /** The running replay's camera and speed, or null. */
+  readonly replay: ReplayState | null;
+  /** The running replay's playback (its time and position); null when not replaying. */
+  readonly replayPlayback: KickPlayback | null;
+  /** Replays the last kick (aim phase only; also while spectating). */
+  startReplay(): boolean;
+  /** Leaves the replay and cuts back to the aim view. */
+  stopReplay(): void;
+  /** Forgets the last kick (the layout changed: practice's New layout). */
+  forgetLast(): void;
+  /** Plays the replay again from the strike. */
+  restartReplay(): void;
+  setReplayCamera(mode: PlaybackCamMode): void;
+  setReplaySpeed(speed: number): void;
   /** Begins a turn: eases the camera to the kicker (or jumps there if `instant`); `spectate` = someone else kicks. */
   startTurn(turn: Turn, opts?: { instant?: boolean; spectate?: boolean }): void;
   /** Starts the wind-up (same as KICK / Space). Ignored outside the aim phase. */
@@ -162,6 +187,14 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
   let kickYaw = 0;
   let kickHeight = 1.7;
   let windupFrom: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
+
+  // Replay: the last played kick (kept until the next one), its own playback and camera.
+  let last: { result: KickResult; kickerId: number | null; kickerAt: { x: number; z: number } | null; height: number } | null = null;
+  let rpb: KickPlayback | null = null;
+  let rcam: ReturnType<typeof createPlaybackCamera> | null = null;
+  let replayCam: PlaybackCamMode = 'chase';
+  let replaySpeed = 1;
+  let replayHidden = false;
 
   // Transition endpoints.
   const tFromPos = new THREE.Vector3();
@@ -240,6 +273,8 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     spectCam = null;
     followTarget = null;
     const kickerId = kickerIdOf(turn?.origin);
+    const k = turn?.origin;
+    last = { result: res, kickerId, kickerAt: k?.kind === 'player' ? { x: k.x, z: k.z } : null, height: kickHeight };
     if (kickerId !== null) {
       players.setYaw(kickerId, res.input.yaw);
       players.playKick?.(kickerId);
@@ -276,6 +311,62 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     if (near === kickerHidden) return;
     kickerHidden = near;
     players.setHidden(near ? k.playerId : null);
+  }
+
+  // ---- replay (M15.1) ---------------------------------------------------------
+  function beginReplayRun(): void {
+    const cam = camera();
+    if (!last || !cam) return;
+    const { result, kickerId } = last;
+    if (kickerId !== null) {
+      players.setYaw(kickerId, result.input.yaw);
+      players.playKick?.(kickerId);
+    }
+    ball.resetRotation();
+    rpb = new KickPlayback(result, {
+      onEvent: (ev) => {
+        if (ev.kind === 'catch') players.playCatch?.(ev.keeperId, ev);
+        opts.onReplayEvent?.(ev, result);
+      },
+      autoSlowRolls: opts.autoSlowRolls ?? true,
+      keeperAt: opts.keeperAt,
+    });
+    rpb.applyTo(ball, 0);
+    rcam = createPlaybackCamera(cam, opts.pitch, replayCam);
+    rcam.setGoalSide(goalSideOf(result));
+    rcam.start(result.start, result.input.yaw, last.height);
+    replayHidden = kickerId !== null;
+    players.setHidden(kickerId);
+    updateReplayVisibility();
+  }
+
+  /** The replayed kicker hides only while they would block the view of the ball. */
+  function updateReplayVisibility(): void {
+    const id = last?.kickerId ?? null;
+    const at = last?.kickerAt;
+    const cam = camera();
+    if (id === null || !at || !cam || !rpb) return;
+    const near = kickerBlocksView(cam.position.x, cam.position.z, rpb.pos.x, rpb.pos.z, at.x, at.z);
+    if (near === replayHidden) return;
+    replayHidden = near;
+    players.setHidden(near ? id : null);
+  }
+
+  /** Drops the replay's playback and camera and relaxes the figures (no phase change). */
+  function clearReplay(): void {
+    if (!rpb && !rcam) return;
+    rpb = null;
+    rcam = null;
+    players.relax?.();
+  }
+
+  /** Back to the aim view after a replay: a cut, like the cut in. */
+  function endReplay(): void {
+    clearReplay();
+    placeBallAtStart();
+    kickerHidden = false;
+    spectCam = null;
+    enterAim();
   }
 
   function frame(dt: number): void {
@@ -356,6 +447,14 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
         if (t >= 1) enterAim();
         break;
       }
+      case 'replay': {
+        if (!rpb) break;
+        const simDt = rpb.update(dt * replaySpeed, { fastForward });
+        rpb.applyTo(ball, simDt);
+        rcam?.update(dt, rpb.pos, rpb.vel);
+        updateReplayVisibility();
+        break;
+      }
       case 'idle':
         break;
     }
@@ -369,6 +468,17 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     const k = ev.key.toLowerCase();
     if (k === 'f') fastForward = true;
     else if (k === 'c' && !ev.repeat) flow.toggleCamera();
+    else if (k === 'r' && !ev.repeat) {
+      if (phase === 'replay') flow.stopReplay();
+      else flow.startReplay();
+    } else if (phase === 'replay' && !ev.repeat) {
+      const i = Number(k) - 1;
+      if (Number.isInteger(i) && i >= 0 && i < REPLAY_SPEEDS.length) flow.setReplaySpeed(REPLAY_SPEEDS[i]!);
+      else if (k === ' ') {
+        ev.preventDefault();
+        flow.restartReplay();
+      } else if (k === 'escape') flow.stopReplay();
+    }
   };
   const onKeyUp = (ev: KeyboardEvent): void => {
     if (ev.key.toLowerCase() === 'f') fastForward = false;
@@ -409,6 +519,46 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     followYaw(yaw) {
       if (spectating && Number.isFinite(yaw)) followTarget = yaw;
     },
+    get canReplay() {
+      return last !== null;
+    },
+    get replay() {
+      return phase === 'replay' && rpb ? { cam: replayCam, speed: replaySpeed, done: rpb.done } : null;
+    },
+    get replayPlayback() {
+      return phase === 'replay' ? rpb : null;
+    },
+    startReplay() {
+      if (phase !== 'aim' || !last || !camera()) return false;
+      // The aim view is suspended (not reset): enterAim() brings it back.
+      aim.active = false;
+      aim.inputEnabled = false;
+      panel.setEnabled(false);
+      spectCam = null;
+      followTarget = null;
+      players.setHidden(null);
+      kickerHidden = false;
+      beginReplayRun();
+      setPhase('replay');
+      return true;
+    },
+    stopReplay() {
+      if (phase === 'replay') endReplay();
+    },
+    forgetLast() {
+      if (phase === 'replay') endReplay();
+      last = null;
+    },
+    restartReplay() {
+      if (phase === 'replay') beginReplayRun();
+    },
+    setReplayCamera(mode) {
+      replayCam = mode;
+      if (phase === 'replay' && rcam) rcam.setMode(mode);
+    },
+    setReplaySpeed(speed) {
+      replaySpeed = snapReplaySpeed(speed);
+    },
     startTurn(next, o = {}) {
       const cam = camera();
       turn = next;
@@ -427,6 +577,7 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       placeBallAtStart();
       pb = null;
       pcam = null;
+      clearReplay();
       if (o.instant || !cam) {
         enterAim();
         return;
@@ -465,7 +616,8 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       }
       // A result nobody asked for here (host guard auto-kick, the other seat
       // online): lock the controls and play it from the current aim height.
-      if (phase === 'aim' || phase === 'transition') {
+      if (phase === 'replay') clearReplay();
+      if (phase === 'aim' || phase === 'transition' || phase === 'replay') {
         kickHeight = aim.state.height;
         aim.active = false;
         aim.inputEnabled = false;
@@ -489,6 +641,10 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
           spectCam = null;
           transitionToAim();
         }
+        return;
+      }
+      if (phase === 'replay') {
+        flow.setReplayCamera(nextReplayCam(replayCam));
         return;
       }
       camMode = camMode === 'chase' ? 'broadcast' : 'chase';

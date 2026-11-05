@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../game/settings';
 import { AIM_HEIGHT_MIN } from '../render/cameras';
+import { sampleFrames } from '../render/playback';
 import { derivePitch } from '../shared/pitch';
 import { PHYS } from '../sim/constants';
 import { simulateKick } from '../sim/simulate';
@@ -266,5 +267,102 @@ describe('spectating (online, the other seat kicks)', () => {
     expect(r.flow.phase).toBe('aim');
     expect(r.aim.active).toBe(true);
     expect(r.view.hidden).toBe(1);
+  });
+});
+
+describe('replay (M15.1)', () => {
+  /** Plays one kick to its end and returns to a fresh aim turn. */
+  function playOne(r: ReturnType<typeof rig>): KickResult {
+    r.flow.startTurn(kicker1, { instant: true });
+    r.pressKick();
+    r.tick(WINDUP_TIME + 0.1);
+    const res = r.flow.playback!.result;
+    r.tick(res.duration + END_HOLD_TIME + 1);
+    expect(r.log.ended).toHaveLength(1);
+    r.flow.startTurn({ origin: { kind: 'player', playerId: 2, team: 1, x: 8, z: 0.3, gk: false }, yaw: Math.PI }, { instant: true });
+    expect(r.flow.phase).toBe('aim');
+    return res;
+  }
+
+  it('has nothing to replay before the first kick, and refuses to start outside the aim phase', () => {
+    const r = rig();
+    r.flow.startTurn(kicker1, { instant: true });
+    expect(r.flow.canReplay).toBe(false);
+    expect(r.flow.startReplay()).toBe(false);
+    expect(r.flow.phase).toBe('aim');
+  });
+
+  it('replays the last kick on exactly the recorded path, then cuts back to the same aim view', () => {
+    const r = rig();
+    const res = playOne(r);
+    expect(r.flow.canReplay).toBe(true);
+    const ballBefore = r.ballPos.clone();
+
+    expect(r.flow.startReplay()).toBe(true);
+    expect(r.flow.phase).toBe('replay');
+    expect(r.flow.replay).toEqual({ cam: 'chase', speed: 1, done: false });
+    expect(r.aim.active || r.aim.inputEnabled || r.panel.enabled).toBe(false);
+    expect(r.view.hidden).toBe(1); // the replayed kicker (#1) hides only while it blocks the view
+
+    // The ball follows the recorded frames, sample by sample.
+    let t = 0;
+    let worst = 0;
+    while (t < res.duration - 0.02) {
+      r.tick(1 / 60);
+      t += 1 / 60;
+      expect(r.flow.replayPlayback?.result).toBe(res);
+      const ref = sampleFrames(res.frames, r.flow.replayPlayback!.t, { x: 0, y: 0, z: 0 });
+      worst = Math.max(worst, Math.hypot(r.ballPos.x - ref.x, r.ballPos.y - ref.y, r.ballPos.z - ref.z));
+    }
+    expect(worst).toBeLessThan(1e-4);
+    r.tick(res.duration + 1);
+    expect(r.flow.replay?.done).toBe(true);
+
+    r.flow.stopReplay();
+    expect(r.flow.phase).toBe('aim');
+    expect(r.flow.replay).toBeNull();
+    expect(r.aim.active && r.aim.inputEnabled && r.panel.enabled).toBe(true);
+    expect(r.view.hidden).toBe(2); // the current kicker is hidden again
+    expect(r.ballPos.distanceTo(ballBefore)).toBeLessThan(1e-9);
+    expect(r.log.ended).toHaveLength(1); // replaying never ends a turn again
+  });
+
+  it('slow motion stretches the replay; the camera can be switched at any time', () => {
+    const r = rig();
+    const res = playOne(r);
+    r.flow.startReplay();
+    r.flow.setReplaySpeed(0.25);
+    r.flow.setReplayCamera('goal');
+    expect(r.flow.replay).toMatchObject({ cam: 'goal', speed: 0.25 });
+    r.tick(2);
+    // 2 s of real time at ¼× covers at most 0.5 s of the kick (slow-roll auto-speed can add up to 2×).
+    expect(r.flow.replayPlayback!.t).toBeGreaterThan(0.45);
+    expect(r.flow.replayPlayback!.t).toBeLessThan(1.05);
+    r.flow.toggleCamera(); // C cycles in a replay: goal → chase
+    expect(r.flow.replay?.cam).toBe('chase');
+    r.flow.restartReplay();
+    expect(r.flow.replayPlayback!.t).toBe(0);
+    expect(res.duration).toBeGreaterThan(1);
+  });
+
+  it('a result that arrives meanwhile (guard kick, the other seat) ends the replay and plays', () => {
+    const r = rig();
+    const res = playOne(r);
+    r.flow.startReplay();
+    r.tick(0.5);
+    r.flow.play(res);
+    expect(r.flow.phase).toBe('playback');
+    expect(r.flow.replay).toBeNull();
+  });
+
+  it('a new turn or forgetLast drops the replay', () => {
+    const r = rig();
+    playOne(r);
+    r.flow.startReplay();
+    r.flow.startTurn(kicker1, { instant: true });
+    expect(r.flow.phase).toBe('aim');
+    expect(r.flow.replay).toBeNull();
+    r.flow.forgetLast();
+    expect(r.flow.canReplay).toBe(false);
   });
 });

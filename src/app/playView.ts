@@ -24,8 +24,9 @@ import { createHalfTimeOverlay } from '../ui/screens';
 import { createAimController } from './aimController';
 import { audio } from './audio';
 import { INSPECT_FOV, type InspectView } from './inspect';
-import { createKickFlow, type Turn } from './kickFlow';
+import { createKickFlow, type FlowPhase, type Turn } from './kickFlow';
 import { createMapControls } from './mapControls';
+import { createReplayControls } from './replayControls';
 import {
   afterKickToast,
   eventToast,
@@ -89,6 +90,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     return seat !== null && session.localSeats.includes(seat);
   };
   let halftime: ReturnType<typeof createHalfTimeOverlay> | null = null;
+  let lastPhase: FlowPhase = 'idle';
 
   const flow = createKickFlow({
     stage,
@@ -112,10 +114,16 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
       const t = eventToast(ev, shown.players);
       if (t) hud.toast(t);
     },
+    onReplayEvent: (ev) => audio.playEvent(ev),
     onPlaybackEnd: () => finishKick(),
     onPhase(p) {
-      // The shot timer runs on the kicker's device only (§8.4).
-      if (p === 'aim' && !flow.spectating) timer.start();
+      // The shot timer runs on the kicker's device only (§8.4). A replay watched
+      // while aiming does not pause or restart it.
+      const from = lastPhase;
+      lastPhase = p;
+      if (p === 'replay' || (p === 'aim' && from === 'replay')) {
+        // keep running
+      } else if (p === 'aim' && !flow.spectating) timer.start();
       else timer.stop();
       render();
     },
@@ -248,7 +256,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
   }
 
   function renderTimer(): void {
-    if (timer.seconds <= 0 || flow.phase !== 'aim') hud.setTimer(null);
+    if (timer.seconds <= 0 || (flow.phase !== 'aim' && flow.phase !== 'replay')) hud.setTimer(null);
     else hud.setTimer({ fraction: timer.fraction, text: timerText(timer.remaining), warn: timer.warn });
   }
 
@@ -273,9 +281,12 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     },
   });
 
+  const replayControls = createReplayControls({ stage, flow, overlay: opts.overlay, covered: () => maps.shown || halftime !== null });
   const offFrame = stage.onFrame((dt) => {
     if (timer.update(dt)) {
-      // §2.4.4: at 0 the ball is kicked with the current direction and sliders.
+      // §2.4.4: at 0 the ball is kicked with the current direction and sliders
+      // (a replay being watched is closed first).
+      flow.stopReplay();
       autoNext = true;
       if (!flow.kick()) autoNext = false;
     }
@@ -317,6 +328,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
       timer.stop();
       halftime?.dispose();
       halftime = null;
+      replayControls.dispose();
       maps.dispose();
       flow.dispose();
       panel.dispose();

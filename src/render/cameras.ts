@@ -164,12 +164,15 @@ export function aimPose(ball: { x: number; y: number; z: number }, yaw: number, 
   return { position, target };
 }
 
-export type PlaybackCamMode = 'chase' | 'broadcast';
+export type PlaybackCamMode = 'chase' | 'broadcast' | 'goal';
 
 /** Chase: never below this height, m (§6.1). */
 export const CHASE_MIN_HEIGHT = 1.5;
 /** FOVs (vertical, degrees) per playback camera. */
-export const PLAYBACK_FOV: Readonly<Record<PlaybackCamMode, number>> = { chase: 60, broadcast: 34 };
+export const PLAYBACK_FOV: Readonly<Record<PlaybackCamMode, number>> = { chase: 60, broadcast: 34, goal: 40 };
+/** Behind-goal camera (replays, M15.1): how far behind the goal line and how high, m. */
+export const GOAL_CAM_BEHIND = 3.2;
+export const GOAL_CAM_HEIGHT = 1.9;
 
 interface Vec3Like {
   x: number;
@@ -190,6 +193,8 @@ export interface PlaybackCamera {
   /** Switches chase ↔ broadcast with an eased move (key C). */
   toggle(): void;
   setMode(mode: PlaybackCamMode): void;
+  /** Which goal the behind-goal camera stands at: +1 = the goal at +x, −1 = at −x (default +1). */
+  setGoalSide(side: 1 | -1): void;
   /** Call every frame while the ball is played back. */
   update(dt: number, ball: Vec3Like, vel: Vec3Like): void;
 }
@@ -223,7 +228,9 @@ export function createPlaybackCamera(
   const rigs: Record<PlaybackCamMode, RigState> = {
     chase: { pos: new THREE.Vector3(), target: new THREE.Vector3() },
     broadcast: { pos: new THREE.Vector3(), target: new THREE.Vector3() },
+    goal: { pos: new THREE.Vector3(), target: new THREE.Vector3() },
   };
+  let goalSide: 1 | -1 = 1;
   const target = new THREE.Vector3();
   /** Chase heading (yaw of the horizontal follow direction), rad. */
   let heading = 0;
@@ -267,6 +274,19 @@ export function createPlaybackCamera(
     r.target.lerp(lookAt, follow(5, dt));
   }
 
+  /** Behind the goal line, a little off-center toward the ball, looking at the ball. */
+  function goalDesired(ball: Vec3Like, out: THREE.Vector3): THREE.Vector3 {
+    const z = Math.max(-6, Math.min(6, ball.z * 0.35));
+    return out.set(goalSide * (pitch.halfLength + GOAL_CAM_BEHIND), GOAL_CAM_HEIGHT, z);
+  }
+
+  function updateGoal(dt: number, ball: Vec3Like): void {
+    const r = rigs.goal;
+    r.pos.lerp(goalDesired(ball, desired), follow(2.2, dt));
+    lookAt.set(ball.x, ball.y * 0.8 + 0.2, ball.z);
+    r.target.lerp(lookAt, follow(6, dt));
+  }
+
   function apply(): void {
     const to = rigs[mode];
     let fov = PLAYBACK_FOV[mode];
@@ -300,10 +320,15 @@ export function createPlaybackCamera(
       rigs.chase.target.copy(aim.target);
       broadcastDesired(ball, rigs.broadcast.pos);
       rigs.broadcast.target.set(ball.x, ball.y * 0.6, ball.z);
+      goalDesired(ball, rigs.goal.pos);
+      rigs.goal.target.set(ball.x, ball.y * 0.8 + 0.2, ball.z);
       apply();
     },
     toggle() {
       this.setMode(mode === 'chase' ? 'broadcast' : 'chase');
+    },
+    setGoalSide(side) {
+      goalSide = side;
     },
     setMode(m) {
       if (m === mode) return;
@@ -317,6 +342,7 @@ export function createPlaybackCamera(
     update(dt, ball, vel) {
       updateChase(dt, ball, vel);
       updateBroadcast(dt, ball);
+      updateGoal(dt, ball);
       if (blend < 1) blend = Math.min(1, blend + dt / PLAYBACK_SWITCH_TIME);
       apply();
     },

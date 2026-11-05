@@ -829,3 +829,13 @@ kbd { display: inline-block; padding: 1px 7px; border-radius: var(--radius-sm); 
 .sound-ctl:hover .sound-slider, .sound-ctl:focus-within .sound-slider { width: 84px; margin-right: 4px; opacity: 1; }
 .sound-ctl.muted .sound-slider { filter: grayscale(1); }
 @media (hover: none) { .sound-slider { width: 84px; margin-right: 4px; opacity: 1; } }
+
+/* ---- Replay (M15.1) ---- */
+.replay-ui { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: center; pointer-events: none; }
+.replay-ui > * { pointer-events: auto; }
+.replay-open { background: var(--surface-2); backdrop-filter: blur(4px); }
+.replay-open kbd, .replay-bar kbd { margin-left: 6px; padding: 0 5px; border: 1px solid var(--surface-3); border-radius: 4px; font: 11px var(--mono); opacity: 0.8; }
+.replay-bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius); background: rgb(20 26 24 / 0.82); box-shadow: var(--shadow-card); flex-wrap: wrap; justify-content: center; }
+.replay-tag { font: 800 12px/1 var(--font); letter-spacing: 0.12em; color: var(--accent); }
+.replay-group { display: inline-flex; gap: 4px; }
+@media (max-width: 760px) { .replay-ui { bottom: 8px; padding: 0 8px; } }

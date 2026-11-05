@@ -146,6 +146,28 @@ describe('playback cameras (M4.4)', () => {
     expect(cam.fov).toBe(PLAYBACK_FOV.broadcast);
   });
 
+  it('behind-goal camera stands behind the goal the ball is heading for and keeps it in view', () => {
+    for (const side of [1, -1] as const) {
+      const res = simulateKick({ input: { yaw: side === 1 ? 0 : Math.PI, power: 0.8, curve: 0, loft: 0.3 }, origin: { kind: 'ghost', x: 0, y: 0.11, z: 0 }, team: 0, world });
+      const cam = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 2000);
+      const rig = createPlaybackCamera(cam, pitch, 'goal');
+      rig.setGoalSide(side);
+      const pb = new KickPlayback(res, { autoSlowRolls: false });
+      rig.start(pb.pos, 0);
+      let frames = 0;
+      while (!pb.done && frames < 3000) {
+        pb.update(1 / 60);
+        rig.update(1 / 60, pb.pos, pb.vel);
+        frames++;
+      }
+      expect(cam.fov).toBe(PLAYBACK_FOV.goal);
+      expect(Math.sign(cam.position.x)).toBe(side);
+      expect(Math.abs(cam.position.x)).toBeGreaterThan(pitch.halfLength);
+      expect(cam.position.y).toBeLessThan(3);
+      expect(rig.mode).toBe('goal');
+    }
+  });
+
   it('toggling eases between rigs without a jump', () => {
     const { poses, rig } = play('chase', { yaw: 0, power: 0.7, loft: 0.3 }, 20);
     expect(rig.mode).toBe('broadcast');

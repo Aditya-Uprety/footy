@@ -23,6 +23,7 @@ import { createInspectView } from './inspect';
 import { createMapControls } from './mapControls';
 import { audio } from './audio';
 import { createKickFlow, type FlowPhase } from './kickFlow';
+import { createReplayControls } from './replayControls';
 import { kickoffTurn, nextPracticeTurn, practiceLayout, type PracticePlayer, type PracticeTurn } from './practiceRules';
 
 export interface PracticeOptions {
@@ -92,6 +93,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
       flow.play(res);
     },
     onEvent: (ev) => onSimEvent(ev),
+    onReplayEvent: (ev) => audio.playEvent(ev),
     onPlaybackEnd: (res) => afterKick(res),
     onPhase: (p) => onPhase(p),
   });
@@ -160,7 +162,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
     h(
       'p',
       { class: 'ph-keys' },
-      'Drag or ← → turn (Shift fine) · ↑ ↓ look · wheel or + − zoom · hold Tab map · Space kick · hold F fast · C camera',
+      'Drag or ← → turn (Shift fine) · ↑ ↓ look · wheel or + − zoom · hold Tab map · Space kick · hold F fast · C camera · R replay',
     ),
   );
   const toastEl = h('div', { class: 'toast', hidden: true });
@@ -185,7 +187,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
 
   function renderHud(): void {
     const p = flow.phase;
-    hud.possession.textContent = p === 'aim' || p === 'transition' ? possessionText() : p === 'windup' ? 'Kick!' : 'Ball in play…';
+    hud.possession.textContent = p === 'aim' || p === 'transition' ? possessionText() : p === 'windup' ? 'Kick!' : p === 'replay' ? 'Replaying the last kick…' : 'Ball in play…';
     hud.possession.className = `ph-possession team-${turn.team}`;
     hud.last.textContent = lastText ? `Last kick: ${lastText}` : 'Aim with the mouse or arrow keys, then kick.';
     hud.score.textContent = `Goals  Red ${score[0]} · Blue ${score[1]}  ·  kicks ${kicks}`;
@@ -215,8 +217,10 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
     },
   });
   const showMap = (on: boolean): void => maps.show(on);
+  const replayControls = createReplayControls({ stage, flow, overlay: opts.overlay, covered: () => maps.shown });
 
   function newLayout(s = randomSeed()): void {
+    flow.forgetLast();
     layout(s);
     score[0] = score[1] = 0;
     kicks = 0;
@@ -266,6 +270,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
       audio.setAmbience(false);
       if (toastTimer) clearTimeout(toastTimer);
       help.dispose();
+      replayControls.dispose();
       maps.dispose();
       flow.dispose();
       panel.dispose();
