@@ -598,3 +598,12 @@ html, body {
 }
 .pp-tooltip.ok { color: #8ff0b4; }
 .pp-tooltip.bad { color: #ff9d90; }
+
+/* ---- Draft hand-off stub (M7.5) ---- */
+.handoff { top: auto; bottom: 18px; transform: translateX(-50%); width: min(460px, calc(100vw - 32px)); }
+.handoff p { margin: 8px 0 0; }
+.ho-teams { display: flex; align-items: center; gap: 12px; font-size: 16px; }
+.ho-teams > span { color: var(--fg-dim); font-size: 13px; }
+.ho-team { padding-left: 8px; border-left: 5px solid var(--fg-dim); }
+.ho-team.team-0 { border-left-color: #d8352f; }
+.ho-team.team-1 { border-left-color: #2c63d6; }

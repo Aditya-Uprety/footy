@@ -27,6 +27,8 @@ export function createHotseatMode(stage: Stage | null, opts: HotseatOptions): Ho
   let screen: HTMLElement | null = null;
   let session: LocalSession | null = null;
   let match: MatchView | null = null;
+  /** Matches started so far: a seeded run (?seed=N) still gets a new toss on "New draft". */
+  let started = 0;
 
   function setup(names?: [string, string]): void {
     if (stage && !backdrop) {
@@ -43,10 +45,27 @@ export function createHotseatMode(stage: Stage | null, opts: HotseatOptions): Ho
     screen = null;
     backdrop?.dispose();
     backdrop = null;
-    const seed = opts.seed ?? Math.floor(Math.random() * 0x7fffffff);
+    const seed = opts.seed !== null ? opts.seed + started : Math.floor(Math.random() * 0x7fffffff);
+    started += 1;
     session = new LocalSession({ settings: defaultSettings(), names, seed });
-    match = createMatchView({ stage, session, overlay: opts.overlay, debug: opts.debug, autoplace: opts.autoplace });
+    match = createMatchView({
+      stage,
+      session,
+      overlay: opts.overlay,
+      debug: opts.debug,
+      autoplace: opts.autoplace,
+      onRestart: () => restart(names),
+    });
     if (opts.debug || import.meta.env.DEV) Object.assign(window, { __hotseat: { session, match } });
+  }
+
+  /** A fresh toss and draft with the same names (new seed unless ?seed is set). */
+  function restart(names: [string, string]): void {
+    match?.dispose();
+    session?.dispose();
+    match = null;
+    session = null;
+    start(names);
   }
 
   setup();

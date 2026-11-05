@@ -3,10 +3,14 @@
 // own settings) is shared by the phase views.
 //   toss       → coin toss + role choice (M7.2)
 //   placement  → draft (M7.3–M7.4)
-//   play, fulltime → stub until M8
+//   play, fulltime → hand-off stub until M8 (the drafted lineup stays visible)
+import { PerspectiveCamera } from 'three';
 import { derivePitch } from '../shared/pitch';
+import { placementPose } from '../render/cameras';
 import type { Stage } from '../render/scene';
-import type { GameState, Phase } from '../game/types';
+import { seatOfTeam } from '../game/rules';
+import type { GameState, Phase, Team } from '../game/types';
+import { KIT_NAME } from '../ui/placementPanel';
 import { h } from '../ui/dom';
 import { createTossScreen } from '../ui/toss';
 import { createPlayersView, type PlayersView } from '../render/players';
@@ -21,6 +25,8 @@ export interface MatchViewOptions {
   overlay: HTMLElement;
   debug: boolean;
   autoplace: boolean;
+  /** Starts a fresh match with the same names (hand-off stub's "New draft"). */
+  onRestart?: () => void;
 }
 
 export interface MatchView {
@@ -64,7 +70,7 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
         view = stage && world ? createPlacementView({ stage, world, session, overlay, debug: opts.debug }) : needsWebGl();
         break;
       default:
-        view = stubView(s);
+        view = handoffView(s);
     }
   }
 
@@ -92,15 +98,27 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
     return { dispose: () => el.remove() };
   }
 
-  function stubView(s: GameState): PhaseView {
+  /** After pick 12: the lineup on the pitch and a small card (the match itself arrives in M8). */
+  function handoffView(s: GameState): PhaseView {
+    const side = (t: Team) => {
+      const seat = seatOfTeam(s, t);
+      return h('div', { class: `ho-team team-${t}` }, h('strong', {}, KIT_NAME[t]), ` ${seat === null ? '' : s.seatNames[seat]}`);
+    };
+    const restart = h('button', { type: 'button', class: 'btn' }, 'New draft');
+    restart.addEventListener('click', () => opts.onRestart?.());
     const el = h(
       'div',
-      { class: 'panel card', 'data-screen': `stub-${s.phase}` },
-      h('h1', {}, s.phase === 'placement' ? 'Draft' : 'Draft complete'),
-      h('p', {}, 'Coming next.'),
-      h('div', { class: 'card-actions' }, h('a', { class: 'btn', href: '#/' }, '← Menu')),
+      { class: 'panel card handoff', 'data-screen': 'handoff' },
+      h('h1', {}, 'Draft complete'),
+      h('div', { class: 'ho-teams' }, side(0), h('span', {}, 'vs'), side(1)),
+      h('p', {}, `${KIT_NAME[0]} kicks off. The match itself arrives in the next build step (M8).`),
+      h('div', { class: 'card-actions' }, h('a', { class: 'btn', href: '#/' }, '← Menu'), opts.onRestart ? restart : null),
     );
     overlay.append(el);
+    if (stage && world) {
+      const { width, height } = stage.size();
+      world.moveTo(placementPose(pitch, width / Math.max(1, height), stage.camera instanceof PerspectiveCamera ? stage.camera.fov : 50), 1.0);
+    }
     return { dispose: () => el.remove() };
   }
 
