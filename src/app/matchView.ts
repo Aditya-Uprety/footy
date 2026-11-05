@@ -18,6 +18,7 @@ import type { GameState, Phase, Seat } from '../game/types';
 import { h } from '../ui/dom';
 import { applyKitTheme, resetKitTheme } from '../ui/kitTheme';
 import { createHelpOverlay } from '../ui/helpOverlay';
+import { createMatchLogPanel, logList, statsTable } from '../ui/matchLog';
 import { createFullTimeScreen } from '../ui/screens';
 import { createTossScreen } from '../ui/toss';
 import { createPlayersView, type PlayersView } from '../render/players';
@@ -64,6 +65,7 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
   // Both devices read the kit pair from the match settings (M13.4).
   applyKitTheme(session.state.settings.kitPair);
   const help = createHelpOverlay(overlay);
+  const matchLog = createMatchLogPanel(overlay, session.state);
   const pitch = derivePitch(session.state.settings);
   const world: InspectView | null = stage ? createInspectView(stage, pitch, { debug: opts.debug, overlay }) : null;
   // Confirmed players, for every phase after the toss.
@@ -126,6 +128,7 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
     if (disposed) return;
     shown = s;
     showPlayers(s);
+    matchLog.update(s);
     if (s.phase !== phase) enter(s);
     else view?.sync?.(s);
     autoAct(s);
@@ -135,6 +138,7 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
   function applied(next: GameState): void {
     shown = next;
     showPlayers(next);
+    matchLog.update(next);
     // A phase change (full-time) swaps views: do it outside the play view's frame callback.
     if (next.phase !== phase) queueMicrotask(() => show(next));
     flushWaiting();
@@ -194,6 +198,10 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
       winner: r.team,
       voted: voted(s),
       waitingFor: waitingFor(s),
+      details: [
+        statsTable(s),
+        h('details', { class: 'log-details' }, h('summary', {}, 'Kick by kick'), logList(s)),
+      ],
       onRematch: () => {
         // Hot-seat: both seats are here, so one click is both votes.
         for (const seat of local) if (!session.state.rematchVotes[seat]) session.send(seat, { type: 'rematch' });
@@ -267,6 +275,7 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
       players?.dispose();
       world?.dispose();
       help.dispose();
+      matchLog.dispose();
       resetKitTheme();
     },
   };

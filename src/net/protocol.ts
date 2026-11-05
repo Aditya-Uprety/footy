@@ -194,6 +194,29 @@ function isLastKick(x: unknown): boolean {
   );
 }
 
+const RESULTS: readonly string[] = ['goal', 'nogoal', 'touch', 'goalline', 'catch', 'stop'];
+
+function isLogEntry(x: unknown): boolean {
+  return (
+    isRec(x) &&
+    isInt(x.n) &&
+    (x.half === 1 || x.half === 2) &&
+    isTeam(x.team) &&
+    (x.player === null || isInt(x.player)) &&
+    typeof x.restart === 'string' &&
+    RESTARTS.includes(x.restart) &&
+    typeof x.result === 'string' &&
+    RESULTS.includes(x.result) &&
+    (x.scored === null || isTeam(x.scored)) &&
+    isBool(x.own) &&
+    (x.shot === 0 || x.shot === 1 || x.shot === 2) &&
+    (x.keeper === null || isInt(x.keeper)) &&
+    typeof x.awarded === 'string' &&
+    RESTARTS.includes(x.awarded) &&
+    (x.nextTeam === null || isTeam(x.nextTeam))
+  );
+}
+
 const PHASES: readonly string[] = ['toss', 'placement', 'play', 'fulltime'];
 
 export function isGameState(x: unknown): x is GameState {
@@ -218,6 +241,9 @@ export function isGameState(x: unknown): x is GameState {
     (x.possession === null || isPossession(x.possession)) &&
     isInt(x.turnId) &&
     (x.last === null || isLastKick(x.last)) &&
+    Array.isArray(x.log) &&
+    x.log.length <= 100 &&
+    x.log.every(isLogEntry) &&
     isPair(x.rematchVotes, isBool)
   );
 }

@@ -195,6 +195,7 @@ footy/
    │  ├─ restarts.ts               # out of play → restart + spots, throw-in exception
    │  ├─ rules.ts                  # newMatch, chooseRole, applyPick, kick, resolveOutcome, rematch
    │  ├─ host.ts                   # HostCore (authoritative, validates intents, guard timer)
+   │  ├─ matchLog.ts               # per-kick KickLogEntry + matchStats: shots, goals, saves, corners, possession % (M15.3)
    │  ├─ serialize.ts              # base64 <-> Float32Array, snapshot helpers
    │  └─ *.test.ts
    ├─ net/
@@ -215,7 +216,7 @@ footy/
    ├─ ui/                          # DOM overlays
    │  ├─ dom.ts  styles.css
    │  ├─ menu.ts  lobby.ts  toss.ts  placementPanel.ts  kickPanel.ts
-   │  └─ hud.ts  minimap.ts  screens.ts  help.ts  helpOverlay.ts  kitTheme.ts  settingsPanel.ts  soundControl.ts
+   │  └─ hud.ts  minimap.ts  screens.ts  help.ts  helpOverlay.ts  kitTheme.ts  settingsPanel.ts  soundControl.ts  matchLog.ts
    └─ app/                         # glue per mode
       ├─ router.ts  session.ts     # Session interface + LocalSession
       ├─ inspect.ts                # M1 inspect view: pitch + goals, orbit camera, keys 1–4, ?debug axes/ruler
@@ -417,6 +418,7 @@ Consequence for balance: the maximum carry (~53 m) only just reaches a goal from
 | Playback camera (in a replay: chase → broadcast → behind goal) | — | C |
 | Replay the last kick / close it | Replay button | R |
 | Replay speed 1× · ½× · ¼× / again | Bar buttons | 1 2 3 / Space |
+| Match log and stats | L button | L |
 | Help | ? button | H |
 
 Sensitivity: drag 0.15°/px (Shift 0.03°/px); keys 40°/s (Shift 6°/s). Slider steps: power 1 %, curve 1 %, loft 0.5°. Tab and Space must `preventDefault`.
@@ -455,6 +457,7 @@ interface GameState {
   possession: Possession | null;
   turnId: number;                        // +1 per new possession
   last: { turnId: number; outcome: Outcome; awarded: RestartKind } | null;
+  log: KickLogEntry[];                   // one compact entry per kick taken (M15.3)
   rematchVotes: [boolean, boolean];
 }
 
@@ -820,4 +823,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 - 2026-11-05 — M14.2: volume and mute live in `app/audioPrefs.ts` (localStorage key `footy-audio`, guarded against blocked storage) and are edited with `ui/soundControl.ts`: a speaker button (click or **M** mutes; the key is in the controls tables) plus a volume slider, bottom-right on every screen, created once in `main.ts` outside the router's `#screen`. Master gain = volume². Per-viewer, not part of `Settings`, never synced. No rules or constants changed.
 - 2026-11-05 — M15.1: **Replay** (R or the "Replay last kick" button) works in the aim phase, also while watching the other seat aim online. It replays the stored `KickResult` through a second `KickPlayback`, so the ball retraces the original path exactly; the camera is a cut (chase / broadcast / new **behind-goal** playback camera, standing 3.2 m behind the goal line the ball ended at; C cycles them) and speed is 1× / ½× / ¼× (keys 1–3). It never changes game state; sounds play, toasts don't. The aim view is suspended and restored by a cut when the replay closes; the **shot timer keeps running** during a replay (it never pauses or restarts), and at 0 the replay closes and the kick fires. A result arriving meanwhile (guard kick, the other seat) ends the replay. Practice has it too (cleared by New layout). `PlaybackCamMode` gained `'goal'`. No rules or constants changed.
 - 2026-11-05 — M15.2: after a **counted goal** (not a disallowed throw-in goal, not at half-time or full-time) both devices automatically replay it over the restart view: `kickFlow.startReplay({ auto: true })` — 1× only (so the host guard's 15 s grace is never at risk), camera choice kept (C / bar), closes itself 0.8 s after the ball stops (hard cap 12 s) or on **Skip** (button, R, Esc, Space). The restart whistle and the kicker's shot timer start when it ends. `app/replayModel.ts` has `wantsGoalReplay`, `AUTO_REPLAY_HOLD/MAX`. No rules or constants changed.
-
+- 2026-11-05 — M15.3: **Match log and stats.** `GameState.log` (new, required on the wire; `isGameState` checks it) gets one compact `KickLogEntry` per kick from `resolveOutcome` (kick number, half, team, kicker id or ghost, restart taken, result goal / nogoal / touch / goalline / catch / stop, scorer, own goal, shot 0/1/2, keeper, awarded restart + who takes it). `game/matchLog.ts` `matchStats(log)` gives per team: goals, shots, shots on target, saves, corners, kicks, possession %. Definitions: a **shot** is a kick by T that ended in the opponent's goal (counted or not), in a catch by the opponent's keeper (= a **save**, credited to the keeper's team), or over the opponent's goal line (off target); **possession %** = share of all kicks taken (each kick is a turn with the ball). Shown on the full-time card (stats table + collapsible kick list) and in an in-match panel (**L** or the L button, Esc/Close hides). Both read the *shown* state, so nothing appears before its playback ends. No rules or constants changed.

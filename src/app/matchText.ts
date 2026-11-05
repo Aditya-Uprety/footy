@@ -2,7 +2,7 @@
 // restart toasts, kick counter, full-time result. No DOM, so it is unit-tested.
 import { seatOfTeam, winner } from '../game/rules';
 import { kitOf } from '../shared/kits';
-import type { GameState, LastKick, PlayerSpot, Possession, RestartKind, Team } from '../game/types';
+import type { GameState, KickLogEntry, LastKick, PlayerSpot, Possession, RestartKind, Team } from '../game/types';
 import type { SimEvent } from '../sim/types';
 
 /** Kit names used in every match text: they follow the match's kit pair (M13.4). */
@@ -134,3 +134,60 @@ export function resultText(s: Pick<GameState, 'score' | 'toss' | 'seatNames'>): 
 export function timerText(remainingSec: number): string {
   return String(Math.max(0, Math.ceil(remainingSec - 1e-9)));
 }
+
+/** One line of the match log: "Red #7 · corner: Saved by Blue #1 (GK) → Keeper's ball — Blue". */
+export interface LogLine {
+  n: number;
+  half: 1 | 2;
+  team: Team;
+  /** The kick's result is a counted goal. */
+  goal: boolean;
+  /** Who kicked, and how. */
+  who: string;
+  /** What happened. */
+  what: string;
+  /** What comes next ("Throw-in — Blue"), or ''. */
+  then: string;
+}
+
+/** The match-log text for one entry (pure; the DOM list is in ui/matchLog.ts). */
+export function logLine(e: KickLogEntry, players: readonly PlayerSpot[]): LogLine {
+  const kit = TEAM_KIT[e.team];
+  const how = e.restart === 'open' || e.restart === 'catch' ? '' : ` · ${restartName(e.restart).toLowerCase()}`;
+  const who = e.player === null ? `${kit}${how || ' kick'}` : `${playerLabel(players, e.player)}${how}`;
+  let what: string;
+  switch (e.result) {
+    case 'goal':
+      what = e.own ? `Own goal — ${TEAM_KIT[e.scored ?? e.team]} score` : `GOAL — ${TEAM_KIT[e.scored ?? e.team]}`;
+      break;
+    case 'nogoal':
+      what = 'No goal (straight from a throw-in)';
+      break;
+    case 'touch':
+      what = 'Out — touchline';
+      break;
+    case 'goalline':
+      what = e.shot === 1 ? 'Shot off target — over the goal line' : 'Out — goal line';
+      break;
+    case 'catch':
+      what = `${e.shot === 2 ? 'Saved' : 'Caught'} by ${e.keeper === null ? 'the keeper' : playerLabel(players, e.keeper)}`;
+      break;
+    case 'stop':
+      what = 'Ball stopped';
+      break;
+  }
+  const next = e.nextTeam === null ? null : e.nextTeam;
+  const then = next !== null && e.awarded !== 'open' ? `${restartName(e.awarded)} — ${TEAM_KIT[next]}` : '';
+  return { n: e.n, half: e.half, team: e.team, goal: e.result === 'goal', who, what, then };
+}
+
+/** "Possession" etc. rows for the stats table, in display order. */
+export const STAT_ROWS: readonly { key: 'goals' | 'shots' | 'onTarget' | 'saves' | 'corners' | 'kicks' | 'possession'; label: string; unit?: string }[] = [
+  { key: 'goals', label: 'Goals' },
+  { key: 'shots', label: 'Shots' },
+  { key: 'onTarget', label: 'Shots on target' },
+  { key: 'saves', label: 'Saves' },
+  { key: 'corners', label: 'Corners' },
+  { key: 'kicks', label: 'Kicks taken' },
+  { key: 'possession', label: 'Possession', unit: '%' },
+];

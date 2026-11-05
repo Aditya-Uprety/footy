@@ -98,6 +98,7 @@ export const KEY_ROWS: readonly KeyRow[] = [
   { action: 'Replay the last kick', mouse: 'Replay button', keys: 'R' },
   { action: 'In a replay: camera · speed', mouse: 'Bar buttons', keys: 'C · 1 2 3 (Space = again)' },
   { action: 'Mute / unmute sound', mouse: 'Speaker button', keys: 'M' },
+  { action: 'Match log and stats', mouse: 'L button', keys: 'L' },
   { action: 'This help', mouse: '—', keys: 'H' },
 ];
 

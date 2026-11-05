@@ -6,6 +6,7 @@ import {
   afterKickToast,
   eventToast,
   kickCounter,
+  logLine,
   possessionText,
   resultText,
   scoreLine,
@@ -136,5 +137,26 @@ describe('shot timer (M8.3)', () => {
     t.start();
     expect(t.running).toBe(false);
     expect(t.update(100)).toBe(false);
+  });
+});
+
+describe('match log text (M15.3)', () => {
+  const s = draftedMatch(5);
+  const line = (o: Outcome, p: Possession = s.possession!) => {
+    const next = resolveOutcome(s, p, o);
+    return logLine(next.log[0]!, next.players);
+  };
+
+  it('names the kicker or the restart, the result and what comes next', () => {
+    const goal = line({ kind: 'goal', goalOf: 1, z: 0, lastTouch: touch(0), touches: 0 });
+    expect(goal).toMatchObject({ n: 1, team: 0, goal: true, who: 'Red · kickoff', what: 'GOAL — Red', then: 'Kickoff — Blue' });
+    const own = line({ kind: 'goal', goalOf: 0, z: 0, lastTouch: touch(0, 3), touches: 1 });
+    expect(own.what).toBe('Own goal — Blue score');
+    expect(line({ kind: 'out', line: 'touch', x: 3, z: 34, lastTouch: touch(0), touches: 0 })).toMatchObject({ what: 'Out — touchline', then: 'Throw-in — Blue' });
+    expect(line({ kind: 'out', line: 'goal', x: 52.5, z: 9, lastTouch: touch(0), touches: 0 })).toMatchObject({ what: 'Shot off target — over the goal line', then: 'Goal kick — Blue' });
+    const saved = line({ kind: 'catch', keeperId: gk(s, 1).id });
+    expect(saved.what).toBe('Saved by Blue #1 (GK)');
+    expect(saved.then).toBe("Keeper's ball — Blue");
+    expect(line({ kind: 'stop', x: 0, z: 0, lastTouch: touch(0), touches: 0 }).then).toBe('');
   });
 });

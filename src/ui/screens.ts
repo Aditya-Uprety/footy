@@ -79,6 +79,8 @@ export interface FullTimeOptions extends ScoreCardInfo {
   voted: boolean;
   waitingFor: string | null;
   onRematch(): void;
+  /** Stats table and kick list (M15.3), shown under the score. */
+  details?: HTMLElement[];
 }
 
 /** Full-time: result, score, Rematch (new toss + draft) and Menu. */
@@ -91,10 +93,11 @@ export function createFullTimeScreen(o: FullTimeOptions): Overlay & { update(o: 
   });
   const el = h(
     'div',
-    { class: 'panel card overlay-card', 'data-screen': 'fulltime' },
+    { class: 'panel card overlay-card overlay-wide', 'data-screen': 'fulltime' },
     h('h1', {}, 'Full-time'),
     h('div', { class: `ov-headline${o.winner === null ? '' : ` team-${o.winner}`}` }, o.headline),
     scoreRow(o),
+    ...(o.details ?? []),
     status,
     h('div', { class: 'card-actions' }, h('a', { class: 'btn', href: '#/' }, '← Menu'), rematch),
   );

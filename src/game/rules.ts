@@ -12,6 +12,7 @@ import type { KickCaps } from '../sim/kick';
 import type { KickOrigin, KickResult } from '../sim/types';
 import { buildWorld } from '../sim/world';
 import { PICK_COUNT, pickInfo, spotsToPlayers, validateSpots } from './draft';
+import { makeLogEntry } from './matchLog';
 import { decideRestart, kickoffPossession } from './restarts';
 import { halfTimeAfter, sanitizeSettings, type Settings } from './settings';
 import {
@@ -84,6 +85,7 @@ export function newMatch(settings: Settings, names: [string, string], rng: Rng, 
     possession: null,
     turnId: 0,
     last: null,
+    log: [],
     rematchVotes: [false, false],
   };
 }
@@ -138,6 +140,7 @@ function startPlay(s: GameState, players: PlayerSpot[]): GameState {
     kicksTaken: 0,
     score: [0, 0],
     last: null,
+    log: [],
   });
 }
 
@@ -215,6 +218,18 @@ export function resolveOutcome(s: GameState, possession: Possession, outcome: Ou
     awarded = 'kickoff';
   }
 
+  const entry = makeLogEntry({
+    n: kicksTaken,
+    half: s.half,
+    team: possession.team,
+    player: possession.kicker.kind === 'player' ? possession.kicker.playerId : null,
+    restart: possession.restart,
+    outcome,
+    disallowed: d.disallowed,
+    awarded,
+    nextTeam: next ? next.team : null,
+    players: s.players,
+  });
   return bump(s, {
     phase,
     score,
@@ -223,6 +238,7 @@ export function resolveOutcome(s: GameState, possession: Possession, outcome: Ou
     possession: next,
     turnId: next ? turnId + 1 : turnId,
     last: { turnId, outcome, awarded, team: possession.team, ...(d.disallowed ? { disallowed: true } : {}) },
+    log: [...s.log, entry],
   });
 }
 

@@ -2,9 +2,10 @@
 // Outcome come from sim/types so the rules and physics layers can't drift.
 
 import type { KickInput, Outcome, Team, Touch } from '../sim/types';
+import type { KickLogEntry } from './matchLog';
 import type { Settings } from './settings';
 
-export type { KickInput, Outcome, Team, Touch, Settings };
+export type { KickInput, Outcome, Team, Touch, Settings, KickLogEntry };
 
 /** 0 = Player 1 / online host, 1 = Player 2 / online guest. */
 export type Seat = 0 | 1;
@@ -70,6 +71,8 @@ export interface GameState {
   /** +1 per new possession. */
   turnId: number;
   last: LastKick | null;
+  /** One entry per kick taken this match (M15.3): the match log and the full-time stats. */
+  log: KickLogEntry[];
   rematchVotes: [boolean, boolean];
 }
 
