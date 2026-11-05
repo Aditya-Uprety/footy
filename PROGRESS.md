@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M6 — Rules engine (M0–M5 done)
-- **Next task:** M6.1 `game/types.ts`, `game/settings.ts`, `shared/rng.ts` (rng already written in M5.5: add tests/helpers only if needed)
+- **Next task:** M6.2 `game/draft.ts` (schedule, validation, forced GK, GK guard)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M5 complete)
+- **Last updated:** 2026-11-05 (M6.1 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -62,7 +62,7 @@
 - [x] M5.A Acceptance checks passed (browser pane) and reported to the user
 
 ## M6 — Rules engine · Opus 5.5 High
-- [ ] M6.1 `game/types.ts`, `game/settings.ts`, `shared/rng.ts`
+- [x] M6.1 `game/types.ts`, `game/settings.ts`, `shared/rng.ts`
 - [ ] M6.2 `game/draft.ts` (schedule, validation, forced GK, GK guard)
 - [ ] M6.3 `game/restarts.ts` (throw-in, corner, goal kick, throw-in goal exception)
 - [ ] M6.4 `game/rules.ts` (match flow, half-time, full-time, rematch)
