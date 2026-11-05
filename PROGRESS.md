@@ -6,7 +6,7 @@
 
 ## Status
 - **Current milestone:** M0 — Scaffold and tooling
-- **Next task:** M0.5 Tests: pitch + architecture purity
+- **Next task:** M0.6 `.claude/launch.json` + README stub
 - **Model for next task:** Opus 5.5 · High effort
 - **Last updated:** 2026-11-05
 - **Notes / blockers:** none
@@ -16,7 +16,7 @@
 - [x] M0.2 Folder skeleton + `shared/pitch.ts` (`derivePitch`)
 - [x] M0.3 Renderer bootstrap, temporary ground + OrbitControls, `?debug` FPS
 - [x] M0.4 Hash router with placeholder screens + query flags
-- [ ] M0.5 Tests: pitch dimensions + architecture purity
+- [x] M0.5 Tests: pitch dimensions + architecture purity
 - [ ] M0.6 `.claude/launch.json` + README stub
 - [ ] M0.A Acceptance checks passed (browser pane) and reported to the user
 
