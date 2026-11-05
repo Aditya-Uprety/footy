@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M11 — Deploy to the web (M0–M10 done)
-- **Next task:** M11.2 GitHub repo + Pages workflow (ask before pushing)
+- **Next task:** M11.A Acceptance checks (public URL, cross-network) — the cross-network check is the user's
 - **Model for next task:** Sonnet 5.5 · High effort
-- **Last updated:** 2026-11-05 (M11.1 done; two-device check on the user's Wi-Fi from M10 still to do by the user)
+- **Last updated:** 2026-11-05 (M11.1–M11.3 done; live at https://aditya-uprety.github.io/footy/; two-device check on the user's Wi-Fi from M10 still to do by the user)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -105,8 +105,8 @@
 
 ## M11 — Deploy to the web · Sonnet 5.5 High
 - [x] M11.1 Relative base + production smoke test
-- [ ] M11.2 GitHub repo + Pages workflow (ask before pushing)
-- [ ] M11.3 README: play / host / join + troubleshooting
+- [x] M11.2 GitHub repo + Pages workflow (ask before pushing)
+- [x] M11.3 README: play / host / join + troubleshooting
 - [ ] M11.A Acceptance checks passed (public URL, cross-network) and reported to the user
 
 ## M12 — Visual polish: players, ball, stadium · Sonnet 5.5 High
@@ -171,3 +171,4 @@
 - 2026-11-05 — M10 notes: `net/hostSession.ts` HostSession = HostCore + HostLink (state snapshot on every change and on every (re)join; `kick{result base64, next}`; `denied`; guest aims forwarded only from the aiming seat; guards ticked every 500 ms). `net/guestSession.ts` GuestSession (seat 1; drops older revs; derives the kick's seat from its previous state; refuses off-turn intents locally via `guestIntentBlock`; `attach(link)` after a reconnect keeps the same match view). `game/serialize.ts` = pure base64 + `toWireKick`/`fromWireKick`. `Session` gained `aim()` / `onAim()`. `app/online.ts`: host Start → HostSession + match view (seat reserved RESERVE_MS from then on); guest's first snapshot → match view; mid-match guest drop → automatic retries 1-2-4-8-16-29 s (overlay shows the attempt), then "Try again"; host sees "Opponent disconnected — waiting…" until the resume. kickFlow `startTurn(turn, { spectate })`: no input, no shot timer, kick bar hidden, view eases to the streamed yaw (`followYaw`), C = kicker view ↔ broadcast while spectating. Placement timer countdown in the pick banner (both devices) with auto-fill at 0. Dev flags `?shot=N` / `?place=N`. `window.__online` now also exposes `session` and `match`. Host-refresh recovery (optional in §8.5) was not done. PeerJS logging is off (`debug: 0`); our own error mapping still shows every failure in the UI.
 - 2026-11-05 — M10.A: verified with two headless Chrome pages on the real PeerJS cloud server (`?autoplace`, scripts in the chat's scratchpad; pattern: host page evals `__online.room.code`, clicks Start match, guest opens `#/join/CODE`): full 40-kick match to full-time on both, identical rev, score (2–0) and a hash of all 40 kicks' outcome / end point / frame count; half-time and full-time cards on both; Rematch from both → new toss. Opponent's turn: kick bar hidden, aim input off, HUD "Watching <name>…", spectator yaw equals the kicker's streamed yaw at kick time on every turn. `?shot=10` with idle players: each side's own timer auto-kicked its turn. Forced guest drop → "Reconnecting… (attempt 1 of 6)" → back within ~5 s; guest page reload mid-match → rejoined with the same state and played on. No console errors (after fixing PeerTransport sending/flushing on dead connections). `npm run check` 341 tests green. Not done here: two real devices on one Wi-Fi (user check), and the browser pane (no WebGL; the lobby DOM was already checked in M9.A).
 - 2026-11-05 — M11.1: `base: './'` was already set in M0; verified. `npm run build` → `dist/index.html` references `./assets/…` only (JS 774 kB / 211 kB gzip, PeerJS chunk 87 kB, lil-gui chunk 31 kB, sourcemaps on). `vite preview` on 4173 serves the menu and the lazy chunks (200). Headless Chrome (`webgl-shot`) on `http://localhost:4173/?autoplace&seed=3#/hotseat`: draft skipped, kickoff played, HUD moved to "Kick 2/40", no console errors. `window.__match` exists in the production build too (harmless). `npm run check` 341 tests green.
+- 2026-11-05 — M11.2/M11.3: repo https://github.com/Aditya-Uprety/footy (public, created with `gh` after the user said yes; `origin/main`). Pages source = GitHub Actions (enabled via the API). `.github/workflows/deploy.yml`: push to main / manual → `npm ci` → `npm run check` → `npm run build` (VITE_TURN_* / VITE_PEER_* come from repository variables; empty = unset) → upload-pages-artifact → deploy-pages. First run green. Live site: https://aditya-uprety.github.io/footy/ returns 200 over HTTPS; headless Chrome played a hot-seat kickoff there with no console errors. README rewritten (how to play, online play, troubleshooting, TURN/PeerServer env vars, deploy). Known: GitHub warns that Node 20-based actions (checkout, setup-node, configure-pages, upload-pages-artifact) are forced to Node 24; harmless for now, bump action majors when newer ones exist. Host-page refresh still ends an online match (optional recovery not built).
