@@ -203,7 +203,9 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
         h('details', { class: 'log-details' }, h('summary', {}, 'Kick by kick'), logList(s)),
       ],
       onRematch: () => {
-        // Hot-seat: both seats are here, so one click is both votes.
+        // Hot-seat: both seats are here, so one click is both votes. Only at
+        // full-time: a late click must never vote in the next match (M17.3).
+        if (session.state.phase !== 'fulltime') return;
         for (const seat of local) if (!session.state.rematchVotes[seat]) session.send(seat, { type: 'rematch' });
       },
     });

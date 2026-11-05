@@ -83,12 +83,36 @@ export interface FullTimeOptions extends ScoreCardInfo {
   details?: HTMLElement[];
 }
 
+/** How long a clicked Rematch stays disabled while its vote is on the way (M17.3). */
+export const REMATCH_PENDING_MS = 5000;
+
+/**
+ * The Rematch button is disabled once this device's vote is in the state, and
+ * also while a click is pending (`pendingAt`, ms): a state that arrives in
+ * between (e.g. the other seat's vote) must not re-enable it and allow a
+ * second vote. After REMATCH_PENDING_MS a vote that never arrived (lost while
+ * reconnecting) can be sent again.
+ */
+export function rematchDisabled(voted: boolean, pendingAt: number | null, now: number): boolean {
+  return voted || (pendingAt !== null && now - pendingAt < REMATCH_PENDING_MS);
+}
+
 /** Full-time: result, score, Rematch (new toss + draft) and Menu. */
 export function createFullTimeScreen(o: FullTimeOptions): Overlay & { update(o: Pick<FullTimeOptions, 'voted' | 'waitingFor'>): void } {
   const rematch = h('button', { type: 'button', class: 'btn btn-primary', 'data-action': 'rematch' }, 'Rematch');
   const status = h('p', { class: 'ov-status' });
+  let pendingAt: number | null = null;
+  let voted = o.voted;
+  let retry: ReturnType<typeof setTimeout> | null = null;
+  const refresh = (): void => {
+    rematch.disabled = rematchDisabled(voted, pendingAt, performance.now());
+  };
   rematch.addEventListener('click', () => {
-    rematch.disabled = true;
+    if (rematchDisabled(voted, pendingAt, performance.now())) return;
+    pendingAt = performance.now();
+    refresh();
+    if (retry) clearTimeout(retry);
+    retry = setTimeout(refresh, REMATCH_PENDING_MS + 50);
     o.onRematch();
   });
   const el = h(
@@ -102,7 +126,8 @@ export function createFullTimeScreen(o: FullTimeOptions): Overlay & { update(o: 
     h('div', { class: 'card-actions' }, h('a', { class: 'btn', href: '#/' }, '← Menu'), rematch),
   );
   function update(u: Pick<FullTimeOptions, 'voted' | 'waitingFor'>): void {
-    rematch.disabled = u.voted;
+    voted = u.voted;
+    refresh();
     status.textContent = u.voted && u.waitingFor ? `Waiting for ${u.waitingFor}…` : 'Rematch: a new coin toss and a fresh draft.';
   }
   update(o);
@@ -110,6 +135,7 @@ export function createFullTimeScreen(o: FullTimeOptions): Overlay & { update(o: 
     el,
     update,
     dispose() {
+      if (retry) clearTimeout(retry);
       el.remove();
     },
   };
