@@ -3,12 +3,13 @@
 //
 // Layout: each team gets one keeper inside its own penalty area and ten
 // outfield players, following the placement spot rules of §2.3.4 a–d (1 m
-// field margin, hitbox outside the center circle, ≥ X from teammates, ≥ Y
-// from opponents). Outfield players lean toward their own half.
+// field margin, hitbox outside the center circle and the opponent's box,
+// ≥ X from teammates, ≥ Y from opponents). Outfield players lean toward their own half.
 //
 // Next kicker: after a stop the closest player (§2.5.6); after a catch the
 // keeper; goals and outs reset to a center kickoff (by the conceding team, or
 // the team that did not touch the ball last).
+import { inOpponentBox } from '../game/draft';
 import { closestPlayer } from '../game/possession';
 import type { Settings } from '../game/settings';
 import type { Pitch } from '../shared/pitch';
@@ -43,6 +44,7 @@ export function practiceSpotOk(
   const R = spot.gk ? HITBOX.GK.R : HITBOX.OUTFIELD.R;
   if (Math.sqrt(spot.x * spot.x + spot.z * spot.z) < pitch.centerCircleR + R) return false;
   if (spot.gk && !rectContains(pitch.ends[spot.team].penaltyArea, spot.x, spot.z)) return false;
+  if (!spot.gk && inOpponentBox(pitch, spot.team, spot.x, spot.z, R)) return false;
   for (const p of placed) {
     const d = Math.sqrt((p.x - spot.x) ** 2 + (p.z - spot.z) ** 2);
     if (d < (p.team === spot.team ? settings.minTeammateDist : settings.minOpponentDist)) return false;

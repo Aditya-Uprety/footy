@@ -62,11 +62,28 @@ describe('validateSpots (§2.3.4)', () => {
     expect(validateSpots(st(0), 0, [{ x: r + 0.4, z: 0, gk: false }])).toEqual([]);
   });
 
-  it('c: keeper only inside its own penalty area; outfield anywhere incl. boxes', () => {
+  it('c: keeper only inside its own penalty area; outfield anywhere incl. the own box', () => {
     expect(codes(validateSpots(st(0), 0, [{ x: -30, z: 0, gk: true }]))).toEqual(['gkBox']);
     expect(codes(validateSpots(st(0), 0, [{ x: 45, z: 0, gk: true }]))).toEqual(['gkBox']);
     expect(validateSpots(st(0), 0, [{ x: -48, z: 3, gk: true }])).toEqual([]);
-    expect(validateSpots(st(0), 0, [{ x: 45, z: 0, gk: false }])).toEqual([]);
+    expect(validateSpots(st(0), 0, [{ x: -45, z: 0, gk: false }])).toEqual([]);
+  });
+
+  it("c (M17): outfield hitbox fully outside the opponent's penalty area", () => {
+    // B's box: x ≥ 36, |z| ≤ 20.16; outfield R = 0.4.
+    const one = (team: 0 | 1, x: number, z: number) => validateSpots(st(team === 0 ? 0 : 1, team === 0 ? [] : [pl(1, 0, -20, 0)]), team, team === 0 ? [{ x, z, gk: false }] : [{ x, z, gk: false }, { x: -30, z: 20, gk: false }]);
+    const v = one(0, 45, 0);
+    expect(codes(v)).toEqual(['opponentBox']);
+    expect(v[0]!.message).toMatch(/opponent's penalty area/);
+    expect(codes(one(0, 35.7, 0))).toEqual(['opponentBox']); // hitbox reaches over the line
+    expect(one(0, 35.59, 0)).toEqual([]);
+    expect(codes(one(0, 40, 20.5))).toEqual(['opponentBox']); // side edge
+    expect(one(0, 40, 20.6)).toEqual([]);
+    expect(codes(one(0, 35.75, 20.4))).toEqual(['opponentBox']); // near the corner, 0.35 m away
+    expect(one(0, 35.7, 20.5)).toEqual([]); // 0.42 m from the corner
+    // Team B mirrored: A's box is x ≤ -36.
+    expect(codes(one(1, -40, 5))).toEqual(['opponentBox']);
+    expect(one(1, 40, 5)).toEqual([]);
   });
 
   it('d: ≥ X from teammates, ≥ Y from opponents (incl. the same pick)', () => {
@@ -142,19 +159,15 @@ describe('keeper feasibility guard (§2.3.4e)', () => {
     expect(gkForced(st(11, [...tiles, pl(99, 1, 48, 16)]), 1)).toBe(false);
   });
 
-  it('blocks a pick that seals the opponent’s box', () => {
-    // Opponent spacing 7 m: A's outfielders on two rows inside B's (empty) box.
-    const wide = { ...settings, minOpponentDist: 7 };
-    const sealers: PlayerSpot[] = [];
-    for (const z of [-16, -8, 0, 8, 16]) sealers.push(pl(sealers.length + 1, 0, 40, z));
-    for (const z of [-12, -4, 4, 12]) sealers.push(pl(sealers.length + 1, 0, 48, z));
-    const at = { settings: wide, pick: 2, players: sealers };
-    expect(gkSpotExists(derivePitch(wide), wide, sealers, 1)).toBe(true);
-    const v = validateSpots(at, 0, [{ x: 48, z: 20, gk: false }, { x: 48, z: -20, gk: false }]);
-    expect(codes(v)).toEqual(['gkGuard']);
-    expect(v[0]!.message).toMatch(/other team's keeper/);
-    // Leaving a gap is fine.
-    expect(validateSpots(at, 0, [{ x: 48, z: 20, gk: false }, { x: -20, z: 0, gk: false }])).toEqual([]);
+  it('opponents can no longer seal a box (M17): sealing spots are inside it', () => {
+    const wide = { ...settings, minTeammateDist: 15, minOpponentDist: 14 };
+    const at = { settings: wide, pick: 2, players: [] as PlayerSpot[] };
+    expect(codes(validateSpots(at, 0, [{ x: 48, z: 20, gk: false }, { x: 48, z: -20, gk: false }]))).toEqual(['opponentBox', 'opponentBox']);
+    // Widest opponent spacing, A's players hugging the outside of B's box: a keeper spot is left.
+    const ring: PlayerSpot[] = [];
+    for (const z of [-24, -9, 6, 21]) ring.push(pl(ring.length + 1, 0, 35.5, z));
+    for (const z of [-21, 21]) ring.push(pl(ring.length + 1, 0, 44, z * 1.02));
+    expect(gkSpotExists(derivePitch(wide), wide, ring, 1)).toBe(true);
   });
 
   it('does not apply once the team has its keeper', () => {

@@ -6,7 +6,8 @@
 //
 // The seat whose pick it is hovers the ground: a green/red marker plus a
 // tooltip with the reason (rules a–d against everyone standing). Rings show
-// X around that team's players and Y around opponents; the center circle and
+// X around that team's players and Y around opponents; the center circle, the
+// opponent's penalty area (M17) and
 // the 1 m line margin are tinted as no-go; the own box lights up for the
 // keeper. Click places a tentative spot, drag moves one, right-click or Undo
 // removes; Confirm sends the pick. Tentative spots exist only on this device

@@ -108,16 +108,10 @@ describe('placement model: keeper toggle (M7.3)', () => {
     expect(m.spots[0]).toEqual({ x: -45, z: 5, gk: true });
   });
 
-  it('surfaces the guard at Confirm', () => {
-    // Opponent spacing 7 m: A's outfielders fill B's empty box except two corners.
-    const wide = { ...settings, minOpponentDist: 7 };
-    const sealers: PlayerSpot[] = [];
-    for (const z of [-16, -8, 0, 8, 16]) sealers.push(pl(sealers.length + 1, 0, 40, z));
-    for (const z of [-12, -4, 4, 12]) sealers.push(pl(sealers.length + 1, 0, 48, z));
-    const m = createPlacementModel({ settings: wide, pick: 2, players: sealers }, 0);
-    m.add(48, 20);
-    m.add(48, -20);
-    expect(codes(m.issues())).toEqual(['gkGuard']);
+  it("refuses spots in the opponent's box (M17)", () => {
+    const m = createPlacementModel(st(0), 0);
+    expect(codes(m.check(48, 0))).toEqual(['opponentBox']);
+    expect(m.check(30, 0)).toEqual([]);
   });
 
   it('no forced keeper when an outfield teammate already stands in the own box (M17)', () => {

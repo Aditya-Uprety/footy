@@ -198,3 +198,10 @@ export function derivePitch(settings: PitchSettings): Pitch {
 export function rectContains(r: Rect2, x: number, z: number): boolean {
   return x >= r.xMin && x <= r.xMax && z >= r.zMin && z <= r.zMax;
 }
+
+/** 2D distance from (x, z) to the rectangle; 0 on or inside it. */
+export function rectDistance(r: Rect2, x: number, z: number): number {
+  const dx = Math.max(r.xMin - x, 0, x - r.xMax);
+  const dz = Math.max(r.zMin - z, 0, z - r.zMax);
+  return Math.sqrt(dx * dx + dz * dz);
+}

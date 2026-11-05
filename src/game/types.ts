@@ -94,6 +94,7 @@ export interface Violation {
     | 'bounds'
     | 'centerCircle'
     | 'gkBox'
+    | 'opponentBox'
     | 'teammate'
     | 'opponent'
     | 'gkCount'

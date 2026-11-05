@@ -2,7 +2,7 @@
 // validation with readable reasons, forced keeper, keeper feasibility guard,
 // and random legal fills (placement timer expiry, ?autoplace).
 
-import { derivePitch, rectContains, type Pitch } from '../shared/pitch';
+import { derivePitch, rectContains, rectDistance, type Pitch } from '../shared/pitch';
 import type { Rng } from '../shared/rng';
 import { HITBOX } from '../sim/constants';
 import type { Settings } from './settings';
@@ -34,6 +34,14 @@ export function slotsLeftFrom(pick: number, team: Team): number {
 
 export function teamHasGk(players: readonly PlayerSpot[], team: Team): boolean {
   return players.some((p) => p.team === team && p.gk);
+}
+
+/**
+ * §2.3.4c (M17): an outfield player's hitbox (radius `r`) must stay fully
+ * outside the opponent's penalty area. True when it would reach into it.
+ */
+export function inOpponentBox(pitch: Pitch, team: Team, x: number, z: number, r: number): boolean {
+  return rectDistance(pitch.ends[otherTeam(team)].penaltyArea, x, z) < r;
 }
 
 /** True when an outfield player of `team` already stands in its own penalty area (§2.3.3, M17). */
@@ -71,7 +79,7 @@ function fmt(m: number): string {
 }
 
 /**
- * Rules a–d of §2.3.4 for one spot against the players already standing
+ * Rules a–d of §2.3.4 (c includes the opponent's box, M17) for one spot against the players already standing
  * (confirmed players plus other tentative spots of this pick). Returns every
  * broken rule; the UI shows the first message on hover.
  */
@@ -101,6 +109,9 @@ export function spotViolations(
   }
   if (spot.gk && !rectContains(pitch.ends[team].penaltyArea, spot.x, spot.z)) {
     v('gkBox', 'The keeper must stand in your own penalty area');
+  }
+  if (!spot.gk && inOpponentBox(pitch, team, spot.x, spot.z, R)) {
+    v('opponentBox', "Inside the opponent's penalty area");
   }
   let nearMate = Infinity;
   let nearOpp = Infinity;

@@ -75,7 +75,7 @@ export function createPlacementPanel(): PlacementPanel {
     { class: 'pp-legend' },
     h('div', {}, iconOwn, legendX),
     h('div', {}, iconOpp, legendY),
-    h('div', {}, h('i', { class: 'lg lg-nogo' }), 'No-go: center circle, 1 m from the lines'),
+    h('div', {}, h('i', { class: 'lg lg-nogo' }), 'No-go: center circle, their box, 1 m from the lines'),
     h('div', {}, h('i', { class: 'lg lg-box' }), 'Your box: the keeper stands here'),
   );
   const keys = h(

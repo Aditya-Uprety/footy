@@ -1,5 +1,6 @@
 // Ground overlay for the draft (PLAN §9, M7.3–M7.4): no-go zones (center
-// circle + hitbox, the 1 m line margin), the active team's own penalty area
+// circle + hitbox, the 1 m line margin, the opponent's penalty area + hitbox
+// for the team placing now, M17), the active team's own penalty area
 // (where its keeper must stand), exclusion rings (X around the active team's
 // players, Y around opponents), the hover marker (green = legal, red = not)
 // and rings under tentative spots. Everything lies flat just above the grass,
@@ -112,6 +113,31 @@ function rectGeo(r: Rect2): THREE.BufferGeometry {
   return g;
 }
 
+/**
+ * The opponent's penalty area grown by the hitbox radius `r` (rounded corners
+ * on the field side), as a flat shape. The goal-line side stops at the
+ * placement margin so it doesn't double-tint the margin band.
+ */
+function noGoBoxGeo(box: Rect2, bounds: Rect2, r: number): THREE.BufferGeometry {
+  const lineAtMin = Math.abs(box.xMin) > Math.abs(box.xMax);
+  const fieldX = lineAtMin ? box.xMax : box.xMin;
+  const lineX = lineAtMin ? bounds.xMin : bounds.xMax;
+  const dir = lineAtMin ? 1 : -1;
+  const pts: [number, number][] = [[lineX, box.zMin - r]];
+  const arc = (cz: number, a0: number, a1: number): void => {
+    for (let i = 0; i <= 12; i++) {
+      const a = a0 + ((a1 - a0) * i) / 12;
+      pts.push([fieldX + dir * r * Math.cos(a), cz + r * Math.sin(a)]);
+    }
+  };
+  arc(box.zMin, -Math.PI / 2, 0);
+  arc(box.zMax, 0, Math.PI / 2);
+  pts.push([lineX, box.zMax + r]);
+  // flat() maps the shape's y to -z.
+  const shape = new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(x, -z)));
+  return flat(new THREE.ShapeGeometry(shape));
+}
+
 /** The band between the outer rect and the inner rect (both axis-aligned, inner inside outer). */
 function frameGeo(outer: Rect2, inner: Rect2): THREE.BufferGeometry {
   const parts = [
@@ -151,6 +177,13 @@ export function createPlacementOverlay(pitch: Pitch, spacing: Spacing): Placemen
   mesh(flat(new THREE.CircleGeometry(ccR, 96)), overlayMat(NO_GO, 0.3), 1, 'nogo-center');
   mesh(flat(new THREE.RingGeometry(ccR - 0.12, ccR, 96)), overlayMat(NO_GO, 0.75), 2, 'nogo-center-edge');
   mesh(frameGeo(pitch.field, pitch.placementBounds), overlayMat(NO_GO, 0.45), 1, 'nogo-margin');
+
+  // Opponent's penalty area (+ outfield hitbox): shown for the team placing now.
+  const oppBoxes = pitch.ends.map((end) => {
+    const m = mesh(noGoBoxGeo(end.penaltyArea, pitch.placementBounds, HITBOX.OUTFIELD.R), overlayMat(NO_GO, 0.3), 1, `nogo-box-${end.team}`);
+    m.visible = false;
+    return m;
+  });
 
   // ---- sides: half tints + goal signs (M17) ---------------------------------
   const halfMats = pitch.ends.map(() => keep(overlayMat(0xffffff, 0.1)));
@@ -266,6 +299,7 @@ export function createPlacementOverlay(pitch: Pitch, spacing: Spacing): Placemen
 
   function refreshBox(): void {
     boxes.forEach((b, i) => (b.visible = team === i));
+    oppBoxes.forEach((b, i) => (b.visible = team !== null && team !== i));
     boxMat.opacity = gkFocus ? 0.26 : 0.1;
   }
 

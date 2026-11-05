@@ -1,7 +1,7 @@
 // Practice rules (M5.5): seeded legal layout and the next kicker.
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../game/settings';
-import { derivePitch, rectContains } from '../shared/pitch';
+import { derivePitch, rectContains, rectDistance } from '../shared/pitch';
 import { createRng } from '../shared/rng';
 import { HITBOX } from '../sim/constants';
 import type { Touch } from '../sim/types';
@@ -29,6 +29,7 @@ describe('practice layout', () => {
         expect(rectContains(pitch.placementBounds, p.x, p.z)).toBe(true);
         const R = p.gk ? HITBOX.GK.R : HITBOX.OUTFIELD.R;
         expect(Math.hypot(p.x, p.z)).toBeGreaterThanOrEqual(pitch.centerCircleR + R - 0.01);
+        if (!p.gk) expect(rectDistance(pitch.ends[p.team === 0 ? 1 : 0].penaltyArea, p.x, p.z)).toBeGreaterThanOrEqual(R); // M17
         for (const q of ps) {
           if (q === p) continue;
           const d = Math.hypot(p.x - q.x, p.z - q.z);

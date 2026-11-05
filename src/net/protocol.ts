@@ -120,6 +120,7 @@ const VIOLATION_CODES: readonly string[] = [
   'bounds',
   'centerCircle',
   'gkBox',
+  'opponentBox',
   'teammate',
   'opponent',
   'gkCount',

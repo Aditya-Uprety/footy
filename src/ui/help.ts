@@ -40,7 +40,7 @@ export const RULE_SECTIONS: readonly HelpSection[] = [
     paragraphs: ['A coin toss decides who picks a side: Team A places first and takes the opening kickoff, Team B places the last player and sees everything.'],
     bullets: [
       'You place in turns of one or two players (a snake draft, 12 turns in all). Drag to move a spot, right-click or Undo to remove it, then Confirm. Your opponent sees your players only after you confirm.',
-      `Stay ${S.minTeammateDist} m from your own players and ${S.minOpponentDist} m from the opponent’s, out of the center circle, and 1 m inside the lines.`,
+      `Stay ${S.minTeammateDist} m from your own players and ${S.minOpponentDist} m from the opponent’s, out of the center circle and the opponent’s penalty area, and 1 m inside the lines.`,
       'Each team may place one goalkeeper, who must stand in their own penalty area. If you have not placed yours by your last slot, that slot becomes the keeper, unless one of your outfield players already stands in your box: then you may play without a keeper.',
     ],
   },
