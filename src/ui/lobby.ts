@@ -73,17 +73,23 @@ export function createHostLobby(o: HostLobbyOptions): HostLobby {
   copyBtn.addEventListener('click', () => {
     const link = linkEl.value;
     if (!link) return;
-    const done = (): void => {
-      copyBtn.textContent = 'Copied ✓';
-      setTimeout(() => (copyBtn.textContent = 'Copy link'), 1600);
+    const show = (text: string): void => {
+      copyBtn.textContent = text;
+      setTimeout(() => (copyBtn.textContent = 'Copy link'), 2000);
     };
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(done, () => selectLink());
-    else selectLink();
+    const fallback = (): void => show(selectLink() ? 'Copied ✓' : 'Press Ctrl+C');
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(() => show('Copied ✓'), fallback);
+    else fallback();
   });
-  function selectLink(): void {
+  /** Selects the link text and tries the legacy copy command (leaves it selected for Ctrl+C either way). */
+  function selectLink(): boolean {
     linkEl.focus();
     linkEl.select();
-    document.execCommand?.('copy');
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    }
   }
   linkEl.addEventListener('focus', () => linkEl.select());
   retryBtn.addEventListener('click', () => o.onRetry());

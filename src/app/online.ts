@@ -286,6 +286,7 @@ function joinMode(opts: OnlineOptions): OnlineMode {
         return;
       case 'lost':
         lobby.pill.set('bad', 'Connection lost');
+        lobby.setHost(null);
         overlay.show('Connection lost', 'The connection to the host dropped.', [
           { label: 'Menu', onClick: toMenu },
           { label: 'Reconnect', primary: true, onClick: () => connect() },
