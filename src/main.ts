@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { getFlags, startRouter, type Route } from './app/router';
 import { DEFAULT_SETTINGS } from './game/settings';
 import { createFpsCounter } from './render/debug';
+import { createGoalsView } from './render/goals';
 import { createPitchView } from './render/pitch';
 import { createStage, type Stage } from './render/scene';
 import { derivePitch } from './shared/pitch';
@@ -45,6 +46,7 @@ function setupInspectView(stage: Stage): void {
   sun.position.set(-30, 60, 25);
   stage.scene.add(sun);
   stage.scene.add(createPitchView(pitch, stage.renderer.capabilities.getMaxAnisotropy()).group);
+  stage.scene.add(createGoalsView(pitch).group);
 
   const camera = stage.camera as THREE.PerspectiveCamera;
   camera.position.set(0, pitch.halfLength * 0.9, pitch.halfWidth * 2.1);
@@ -56,6 +58,7 @@ function setupInspectView(stage: Stage): void {
   controls.maxDistance = pitch.length * 1.5;
   controls.update();
   stage.onFrame(() => controls.update());
+  if (flags.debug) Object.assign(window, { __footy: { stage, controls, pitch } });
 }
 
 const stage = tryCreateStage();
