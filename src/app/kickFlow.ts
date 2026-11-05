@@ -21,7 +21,7 @@
 import * as THREE from 'three';
 import type { BallView } from '../render/ball';
 import { createPlaybackCamera, type PlaybackCamMode } from '../render/cameras';
-import { goalSideOf, nextReplayCam, REPLAY_SPEEDS, snapReplaySpeed, type ReplayState } from './replayModel';
+import { AUTO_REPLAY_HOLD, AUTO_REPLAY_MAX, goalSideOf, nextReplayCam, REPLAY_SPEEDS, snapReplaySpeed, type ReplayState } from './replayModel';
 import { KickPlayback } from '../render/playback';
 import type { Stage } from '../render/scene';
 import { angleDiff, easeInOutCubic } from '../shared/math';
@@ -145,8 +145,11 @@ export interface KickFlow {
   readonly replay: ReplayState | null;
   /** The running replay's playback (its time and position); null when not replaying. */
   readonly replayPlayback: KickPlayback | null;
-  /** Replays the last kick (aim phase only; also while spectating). */
-  startReplay(): boolean;
+  /**
+   * Replays the last kick (aim phase only; also while spectating). `auto` = the
+   * automatic goal replay: 1× only, closes itself shortly after the ball stops.
+   */
+  startReplay(opts?: { auto?: boolean }): boolean;
   /** Leaves the replay and cuts back to the aim view. */
   stopReplay(): void;
   /** Forgets the last kick (the layout changed: practice's New layout). */
@@ -195,6 +198,9 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
   let replayCam: PlaybackCamMode = 'chase';
   let replaySpeed = 1;
   let replayHidden = false;
+  let replayAuto = false;
+  let replayElapsed = 0;
+  let replayEndHold = 0;
 
   // Transition endpoints.
   const tFromPos = new THREE.Vector3();
@@ -318,6 +324,8 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     const cam = camera();
     if (!last || !cam) return;
     const { result, kickerId } = last;
+    replayElapsed = 0;
+    replayEndHold = 0;
     if (kickerId !== null) {
       players.setYaw(kickerId, result.input.yaw);
       players.playKick?.(kickerId);
@@ -449,10 +457,16 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       }
       case 'replay': {
         if (!rpb) break;
-        const simDt = rpb.update(dt * replaySpeed, { fastForward });
+        const simDt = rpb.update(dt * (replayAuto ? 1 : replaySpeed), { fastForward });
         rpb.applyTo(ball, simDt);
         rcam?.update(dt, rpb.pos, rpb.vel);
         updateReplayVisibility();
+        if (replayAuto) {
+          // The automatic goal replay closes itself (hard cap in case a ball never settles).
+          replayElapsed += dt;
+          if (rpb.done) replayEndHold += dt;
+          if (replayEndHold >= AUTO_REPLAY_HOLD || replayElapsed >= AUTO_REPLAY_MAX) endReplay();
+        }
         break;
       }
       case 'idle':
@@ -476,7 +490,8 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       if (Number.isInteger(i) && i >= 0 && i < REPLAY_SPEEDS.length) flow.setReplaySpeed(REPLAY_SPEEDS[i]!);
       else if (k === ' ') {
         ev.preventDefault();
-        flow.restartReplay();
+        if (replayAuto) flow.stopReplay();
+        else flow.restartReplay();
       } else if (k === 'escape') flow.stopReplay();
     }
   };
@@ -523,13 +538,14 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       return last !== null;
     },
     get replay() {
-      return phase === 'replay' && rpb ? { cam: replayCam, speed: replaySpeed, done: rpb.done } : null;
+      return phase === 'replay' && rpb ? { cam: replayCam, speed: replayAuto ? 1 : replaySpeed, done: rpb.done, auto: replayAuto } : null;
     },
     get replayPlayback() {
       return phase === 'replay' ? rpb : null;
     },
-    startReplay() {
+    startReplay(o = {}) {
       if (phase !== 'aim' || !last || !camera()) return false;
+      replayAuto = o.auto === true;
       // The aim view is suspended (not reset): enterAim() brings it back.
       aim.active = false;
       aim.inputEnabled = false;
@@ -550,13 +566,14 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       last = null;
     },
     restartReplay() {
-      if (phase === 'replay') beginReplayRun();
+      if (phase === 'replay' && !replayAuto) beginReplayRun();
     },
     setReplayCamera(mode) {
       replayCam = mode;
       if (phase === 'replay' && rcam) rcam.setMode(mode);
     },
     setReplaySpeed(speed) {
+      if (replayAuto && phase === 'replay') return;
       replaySpeed = snapReplaySpeed(speed);
     },
     startTurn(next, o = {}) {

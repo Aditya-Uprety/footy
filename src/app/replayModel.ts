@@ -49,4 +49,18 @@ export interface ReplayState {
   speed: number;
   /** The replayed ball has stopped (the replay waits for Replay again / Close). */
   done: boolean;
+  /** An automatic goal replay (M15.2): 1× only, closes itself, Skip instead of Close. */
+  auto: boolean;
+}
+
+/** Automatic replay: seconds it lingers on the final position, and the longest it may run (real time). */
+export const AUTO_REPLAY_HOLD = 0.8;
+export const AUTO_REPLAY_MAX = 12;
+
+/** Whether a kick's new state earns an automatic goal replay: a counted goal, play goes on (not full-time) and no half-time card. */
+export function wantsGoalReplay(
+  prev: { half: 1 | 2 },
+  next: { phase: string; half: 1 | 2; last: { outcome: { kind: string }; disallowed?: boolean } | null },
+): boolean {
+  return next.phase === 'play' && next.half === prev.half && next.last?.outcome.kind === 'goal' && !next.last.disallowed;
 }

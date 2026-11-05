@@ -27,6 +27,7 @@ import { INSPECT_FOV, type InspectView } from './inspect';
 import { createKickFlow, type FlowPhase, type Turn } from './kickFlow';
 import { createMapControls } from './mapControls';
 import { createReplayControls } from './replayControls';
+import { wantsGoalReplay } from './replayModel';
 import {
   afterKickToast,
   eventToast,
@@ -91,6 +92,8 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
   };
   let halftime: ReturnType<typeof createHalfTimeOverlay> | null = null;
   let lastPhase: FlowPhase = 'idle';
+  /** The automatic goal replay (M15.2) is running or about to start. */
+  let autoReplay = false;
 
   const flow = createKickFlow({
     stage,
@@ -121,10 +124,18 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
       // while aiming does not pause or restart it.
       const from = lastPhase;
       lastPhase = p;
-      if (p === 'replay' || (p === 'aim' && from === 'replay')) {
-        // keep running
+      if (p === 'replay') {
+        // A manual replay keeps the timer running; the automatic goal replay holds it until the kickoff view is back.
+        if (flow.replay?.auto) timer.stop();
+      } else if (p === 'aim' && from === 'replay') {
+        if (autoReplay) {
+          autoReplay = false;
+          if (!flow.spectating) timer.start();
+          audio.whistle('kickoff'); // the restart whistle that beginTurn skips for an instant turn
+        }
       } else if (p === 'aim' && !flow.spectating) timer.start();
       else timer.stop();
+      if (p !== 'replay' && p !== 'aim') autoReplay = false;
       render();
     },
   });
@@ -196,7 +207,11 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
       return;
     }
     if (shown.half !== prev.half) showHalfTime();
-    else beginTurn();
+    else if (wantsGoalReplay(prev, shown) && flow.canReplay) {
+      // M15.2: a goal is replayed over the kickoff view (skippable); the kickoff whistle and shot timer follow it.
+      beginTurn(true);
+      autoReplay = flow.startReplay({ auto: true });
+    } else beginTurn();
   }
 
   function showHalfTime(): void {

@@ -47,20 +47,23 @@ export function createReplayControls(opts: ReplayControlsOptions): ReplayControl
     });
     return b;
   });
+  const speedGroup = h('span', { class: 'replay-group', title: 'Speed (1 · 2 · 3)' }, ...speedBtns);
+  const tag = h('span', { class: 'replay-tag' }, 'REPLAY');
   const again = h('button', { class: 'btn btn-sm', type: 'button' }, '↺ Again');
   again.addEventListener('click', () => {
     flow.restartReplay();
     again.blur();
   });
-  const close = h('button', { class: 'btn btn-sm btn-primary', type: 'button' }, 'Close ', h('kbd', {}, 'R'));
+  const closeLabel = h('span', {}, 'Close');
+  const close = h('button', { class: 'btn btn-sm btn-primary', type: 'button' }, closeLabel, ' ', h('kbd', {}, 'R'));
   close.addEventListener('click', () => flow.stopReplay());
 
   const bar = h(
     'div',
     { class: 'replay-bar', hidden: true, 'data-hud': 'replay-bar' },
-    h('span', { class: 'replay-tag' }, 'REPLAY'),
+    tag,
     h('span', { class: 'replay-group', title: 'Camera (C)' }, ...camBtns),
-    h('span', { class: 'replay-group', title: 'Speed (1 · 2 · 3)' }, ...speedBtns),
+    speedGroup,
     again,
     close,
   );
@@ -72,7 +75,7 @@ export function createReplayControls(opts: ReplayControlsOptions): ReplayControl
     const r = flow.replay;
     const covered = opts.covered?.() ?? false;
     const showOpen = !covered && !r && flow.phase === 'aim' && flow.canReplay;
-    const k = `${showOpen}|${covered}|${r ? `${r.cam}|${r.speed}|${r.done}` : '-'}`;
+    const k = `${showOpen}|${covered}|${r ? `${r.cam}|${r.speed}|${r.done}|${r.auto}` : '-'}`;
     if (k === key) return;
     key = k;
     openBtn.hidden = !showOpen;
@@ -81,6 +84,11 @@ export function createReplayControls(opts: ReplayControlsOptions): ReplayControl
     camBtns.forEach((b, i) => b.classList.toggle('active', REPLAY_CAMS[i] === r.cam));
     speedBtns.forEach((b, i) => b.classList.toggle('active', REPLAY_SPEEDS[i] === r.speed));
     again.classList.toggle('btn-primary', r.done);
+    // The automatic goal replay (M15.2) is 1× only and closes itself: camera choice and Skip.
+    tag.textContent = r.auto ? 'GOAL REPLAY' : 'REPLAY';
+    closeLabel.textContent = r.auto ? 'Skip' : 'Close';
+    speedGroup.hidden = r.auto;
+    again.hidden = r.auto;
   });
 
   return {

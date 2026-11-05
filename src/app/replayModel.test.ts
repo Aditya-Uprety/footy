@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../game/settings';
 import { derivePitch } from '../shared/pitch';
 import { simulateKick } from '../sim/simulate';
-import { goalSideOf, nextReplayCam, REPLAY_CAMS, REPLAY_SPEED_LABEL, REPLAY_SPEEDS, snapReplaySpeed } from './replayModel';
+import { goalSideOf, nextReplayCam, REPLAY_CAMS, REPLAY_SPEED_LABEL, REPLAY_SPEEDS, snapReplaySpeed, wantsGoalReplay } from './replayModel';
 
 const pitch = derivePitch(DEFAULT_SETTINGS);
 const ghost = { kind: 'ghost' as const, x: 0, y: 0.11, z: 0 };
@@ -33,5 +33,20 @@ describe('replay model (M15.1)', () => {
     expect(Math.abs(soft.frames[soft.frames.length - 3]!)).toBeGreaterThan(0);
     expect(goalSideOf(soft)).toBe(-1);
     expect(pitch.halfLength).toBeGreaterThan(50);
+  });
+});
+
+describe('automatic goal replay (M15.2)', () => {
+  const goal = { outcome: { kind: 'goal' }, disallowed: false };
+  it('is wanted after a counted goal in play', () => {
+    expect(wantsGoalReplay({ half: 1 }, { phase: 'play', half: 1, last: goal })).toBe(true);
+    expect(wantsGoalReplay({ half: 2 }, { phase: 'play', half: 2, last: goal })).toBe(true);
+  });
+  it('is not wanted for other outcomes, a disallowed throw-in goal, half-time or full-time', () => {
+    expect(wantsGoalReplay({ half: 1 }, { phase: 'play', half: 1, last: { outcome: { kind: 'out' } } })).toBe(false);
+    expect(wantsGoalReplay({ half: 1 }, { phase: 'play', half: 1, last: { ...goal, disallowed: true } })).toBe(false);
+    expect(wantsGoalReplay({ half: 1 }, { phase: 'play', half: 2, last: goal })).toBe(false);
+    expect(wantsGoalReplay({ half: 2 }, { phase: 'fulltime', half: 2, last: goal })).toBe(false);
+    expect(wantsGoalReplay({ half: 1 }, { phase: 'play', half: 1, last: null })).toBe(false);
   });
 });

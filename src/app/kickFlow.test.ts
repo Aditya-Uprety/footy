@@ -11,6 +11,7 @@ import { simulateKick } from '../sim/simulate';
 import type { KickInput, KickOrigin, KickResult } from '../sim/types';
 import { buildWorld } from '../sim/world';
 import { AIM, aimBall, aimStatePose, defaultAimPitch, type AimState } from './aimController';
+import { AUTO_REPLAY_HOLD } from './replayModel';
 import { createKickFlow, END_HOLD_TIME, kickerBlocksView, TRANSITION_TIME, WINDUP_TIME, type FlowPhase, type Turn } from './kickFlow';
 
 const pitch = derivePitch(DEFAULT_SETTINGS);
@@ -300,7 +301,7 @@ describe('replay (M15.1)', () => {
 
     expect(r.flow.startReplay()).toBe(true);
     expect(r.flow.phase).toBe('replay');
-    expect(r.flow.replay).toEqual({ cam: 'chase', speed: 1, done: false });
+    expect(r.flow.replay).toEqual({ cam: 'chase', speed: 1, done: false, auto: false });
     expect(r.aim.active || r.aim.inputEnabled || r.panel.enabled).toBe(false);
     expect(r.view.hidden).toBe(1); // the replayed kicker (#1) hides only while it blocks the view
 
@@ -364,5 +365,35 @@ describe('replay (M15.1)', () => {
     expect(r.flow.replay).toBeNull();
     r.flow.forgetLast();
     expect(r.flow.canReplay).toBe(false);
+  });
+
+  it('the automatic goal replay is 1× only, closes itself shortly after the ball stops, and can be skipped', () => {
+    const r = rig();
+    const res = playOne(r);
+    expect(r.flow.startReplay({ auto: true })).toBe(true);
+    r.flow.setReplaySpeed(0.25); // ignored: the goal replay is always 1×
+    expect(r.flow.replay).toEqual({ cam: 'chase', speed: 1, done: false, auto: true });
+    r.flow.restartReplay(); // no "Again" in the automatic replay
+    expect(r.flow.replayPlayback!.t).toBeLessThan(0.1);
+    for (let i = 0; i < 60 * (res.duration + 2) && !r.flow.replay?.done; i++) r.tick(1 / 60);
+    expect(r.flow.phase).toBe('replay');
+    expect(r.flow.replay?.done).toBe(true);
+    r.tick(AUTO_REPLAY_HOLD * 0.5);
+    expect(r.flow.phase).toBe('replay'); // it lingers on the final position
+    r.tick(AUTO_REPLAY_HOLD * 0.5 + 0.1);
+    expect(r.flow.phase).toBe('aim');
+    expect(r.flow.replay).toBeNull();
+    expect(r.aim.active && r.panel.enabled).toBe(true);
+
+    // Skippable at any time, and a manual replay afterwards is a normal one again.
+    expect(r.flow.startReplay({ auto: true })).toBe(true);
+    r.tick(0.3);
+    r.flow.stopReplay();
+    expect(r.flow.phase).toBe('aim');
+    expect(r.flow.startReplay()).toBe(true);
+    r.flow.setReplaySpeed(0.5);
+    expect(r.flow.replay).toEqual({ cam: 'chase', speed: 0.5, done: false, auto: false });
+    r.tick(res.duration * 3);
+    expect(r.flow.phase).toBe('replay'); // a manual replay waits for Close
   });
 });
