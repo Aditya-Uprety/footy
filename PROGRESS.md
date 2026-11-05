@@ -5,10 +5,10 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M3 — Collisions, goals, outs, possession (M0–M2 done)
-- **Next task:** M3.5 collision + event tests
+- **Current milestone:** M4 — Playback renderer and Physics Lab (M0–M3 done)
+- **Next task:** M4.1 `render/ball.ts` (ball mesh, rotation, shadow)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M3.4 done)
+- **Last updated:** 2026-11-05 (M3 complete)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -43,7 +43,7 @@
 - [x] M3.3 Goal/out/catch events, last touch, tails
 - [x] M3.4 `game/possession.ts` (closest player + tie rule)
 - [x] M3.5 Collision + event tests
-- [ ] M3.A Acceptance checks passed and reported to the user
+- [x] M3.A Acceptance checks passed and reported to the user
 
 ## M4 — Playback renderer and Physics Lab · Opus 5.5 High
 - [ ] M4.1 Ball mesh, rotation, shadow
@@ -155,3 +155,4 @@
 - 2026-11-05 — M1 notes: the inspect view (pitch, goals, environment, orbit camera, keys 1–4, debug aids) lives in `app/inspect.ts` and is still shared by every route; later modes bring their own views. `?debug` sets `window.__footy = { stage, controls, pitch, goTo, ruler }`. Markings are one merged mesh lifted 4 mm with polygon offset; the outer ground has a hole under the pitch (it z-fought at distance before). three r187 removed `PCFSoftShadowMap`, so the sun uses `PCFShadowMap` with `shadow.radius` 3 (4096 map). Draw calls ≈ 50–70 with shadows (goal tubes are separate meshes; merge in M12.4 if needed). M1 acceptance measured with real Shift+clicks: circle radius 9.16, box depth 16.47, penalty mark 11.01, between posts 7.42 (clicks on the post faces; inner edges are 7.32 by construction).
 - 2026-11-05 — Watch item (M12.4): in headless SwiftShader, lines farther than ~40 m break into dashes at grazing angles (sub-pixel width). Ask the user whether it shows on a real GPU with MSAA; if so, fade/widen distant lines or move markings to a mipmapped texture.
 - 2026-11-05 — M2 notes: §5.10 matched with the §5.3 constants unchanged (see `npm run sim:table`). `step.ts` is split into `integrate` → `collideGround` (airborne only) → `settleRolling`; M3 should insert players → frame → nets between `collideGround` and `settleRolling` in `simulate.ts`, record a frame on each contact step, and handle "a contact that leaves v.y > V_SETTLE ends rolling". `simulateKick` takes `{ input, origin: KickOrigin, team, caps?, turnId?, consts? }`; M3 adds the world/pitch argument. `kickStats().apex` = ball-center height above the ground (what §5.10 means). Hitbox sizes are `HITBOX` in `sim/constants.ts`; ghost ball spots are `kickoffSpot` / `cornerSpot` / `throwInSpot` in `sim/kick.ts`. `SimEvent` contact events carry t, x, y, z, speed (+ `tail?`).
+- 2026-11-05 — M3 notes: `simulateKick({ ..., world })` takes `buildWorld(pitch, players, kicker)`; without `world` it is the M2 empty infinite plane (no obstacles, no lines), which `sim:table` and the M2 tests still use. `World` = `hitboxes`, `frame` (6 capsules), `nets` (8 rects: back/sideL/sideR/roof per goal), `lines`, `kickerId`; any object with `{ id, team, x, z, gk }` works as a player (game `PlayerSpot` fits). Step order: integrate → ground → players (keeper ⇒ CATCH, stops at once) → frame → nets → settle → `detectLines` (exported). A contact counts as a touch/event only when the ball was approaching (vn < 0). Net contacts also damp spin by NET_TANGENT_KEEP (plan left spin open). Tail contact events carry `tail: true`; no `stop` event is emitted for goal/out results. Goal/out event `t` is the step time (not interpolated). `game/possession.ts` `closestPlayer(players, x, z, kickingTeam)`: tied set = within 0.01 m of the minimum → prefer the non-kicking team → lowest id. The kicker's ball-at-feet spot (§2.5.7) is already `kickStart` in `sim/kick.ts`.
