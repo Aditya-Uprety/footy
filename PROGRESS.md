@@ -5,11 +5,11 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M17 in progress (M0–M16 done)
-- **Next task:** M17.4 (last step): push `main` + tag `v1.0.0` to GitHub so Pages redeploys — **waiting for the user's OK**; then M17.A user sign-off
+- **Current milestone:** M17 in progress (M0–M16 done; M17.1–M17.4 done)
+- **Next task:** M17.A User sign-off (feel signed off by the user on the live site; `npm run check` green; live site updated)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M17.4 local part done: final README, version 1.0.0, local tag `v1.0.0`, production build smoke-tested; M17.3 bug bash and M17.2/2b/2c tuning + sound before that; live at https://aditya-uprety.github.io/footy/ (not pushed since M13); two-device check on the user's Wi-Fi from M10 still to do by the user)
-- **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes). Nothing pushed since M13: the live site has no audio, tuning or M14–M17 work until the push.
+- **Last updated:** 2026-11-05 (M17.4 done: final README, version 1.0.0, tag `v1.0.0`; `main` + tag pushed with the user's OK and the Pages workflow redeployed; live at https://aditya-uprety.github.io/footy/ with all M14–M17 work; two-device check on the user's Wi-Fi from M10 still to do by the user)
+- **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes).
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
 - [x] M0.1 npm project: Vite + TS strict + three + vitest, pinned versions, scripts, .gitignore
@@ -147,7 +147,7 @@
 - [x] M17.2b User feedback round 2: throw-ins to the nearest player, new bounce sound, draft goal signs, corner check
 - [x] M17.2c User feedback: grassy kick + bounce sounds (no drum)
 - [x] M17.3 Bug bash on edge cases
-- [ ] M17.4 Final README, v1.0.0 tag, redeploy (ask before pushing)
+- [x] M17.4 Final README, v1.0.0 tag, redeploy (ask before pushing)
 - [ ] M17.A User sign-off
 
 ## Notes
@@ -203,3 +203,4 @@
 - 2026-11-05 — M17.2c (user feedback: "sounds like a drum"): `kickSound` was a 62→150 Hz sine sweep (a drum-machine kick, 99 % of its energy below 200 Hz); now a pitchless leather "pok" (band-pass noise 1.55 kHz→650 Hz, low-passed 2.4 kHz, 13 ms) + a low-passed noise push + a boot scuff from `grassRustle` (sparse 1.2 ms noise grains, 1.5–6 kHz). `bounceSound` lost its sine body: a muffled low-passed noise "thup" (480 Hz, 16 ms) + a crushed-grass rustle. Centroids (first 60 ms): kick 150 Hz → ~1.75 kHz, bounce ~1.0 kHz; low (<200 Hz) share kick 0.99 → 0.05. New test: kick < 20 % and bounce < 45 % energy below 200 Hz. Old/new WAVs in `sound-preview/` (git-ignored) for the user to compare. Not listened to by me: ask the user.
 - 2026-11-05 — M17.2b (user feedback round 2): (1) **Throw-ins** → `restarts.throwInPossession(pitch, players, team, x, z)` picks the receiving team's player closest to the exit point (`closestPlayer`; ties → lower id), restart stays `'throwin'` (toast "Throw-in — Blue", banner "Blue #7 on the ball"); `rules.kickCaps` caps only a ghost throw-in (fallback without players; the Lab's Throw-in preset still uses the old caps); the throw-in goal exception is removed from `decideRestart` (`disallowed` is always false now; the texts for it are dead but harmless). Practice is unchanged (its outs restart with a kickoff). (2) **Bounce sound** rebuilt in `soundSynth.bounceSound` (noise slap 650→280 Hz band-pass, 12 ms body, grass brush; centroid ~1.1 kHz, 0.7 % energy after 40 ms; old: pure 100 Hz tone, 26 %). Not listened to by me (no audio here): ask the user. (3) **Draft sides**: `placementOverlay.setSides(names)` draws a kit-coloured sprite sign over each goal ("RED GOAL / <name> defends", depthTest off) and tints each team's own half (opacity 0.1); the placement panel has a `pp-side` line. Checked with webgl-shot (seed 3): signs over the correct goals, no console errors. (4) **Corners** checked in Practice via `__practice.flow.startTurn` with a ghost at (52, 33.5): the ball sits in the arc beside the flag, no figure there, a 62 % / −60 curve / 22° kick plays out and possession passes on. `npm run check` 54 files, 496 tests.
 - 2026-11-05 — M17.4 (local): README rewritten for v1.0.0 (features, rules incl. M17 changes, full controls table incl. touch, troubleshooting for sound and `?perf=low`, `#/howto` route, code layout, touch steps of webgl-shot); `package.json` version 1.0.0; `npm run check` 55 files / 506 tests green; `npm run build` OK; production preview (port 4173): menu and How to play render in the pane (only the known no-WebGL errors there), and webgl-shot on `?autoplace&seed=3#/hotseat` played the kickoff (Kick 2/40, Blue #3 on the ball) with no console errors. Annotated tag `v1.0.0` created locally on the M17.4 commit. Not pushed: the box stays open until the user OKs the push (push `main` and the tag; the Pages workflow redeploys).
+- 2026-11-05 — M17.4 (deploy): with the user's OK, pushed `main` and tag `v1.0.0` (`git push origin main --follow-tags`); Pages run 42058580216 succeeded. The live bundle contains the M14–M17 code (kickoff cap text, replay, rotate prompt, audio prefs). webgl-shot on https://aditya-uprety.github.io/footy/?autoplace&seed=3#/hotseat played the kickoff (Kick 2/40, Blue #3 on the ball) with no console errors. CI warns that `actions/deploy-pages@v4` targets Node 20 (forced to Node 24) — harmless for now.
