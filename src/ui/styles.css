@@ -11,6 +11,9 @@
 
 * { box-sizing: border-box; }
 
+/* Author display rules must not override the hidden attribute. */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   height: 100%;
@@ -307,3 +310,30 @@ html, body {
 .kp-kick:hover:not(:disabled) { filter: brightness(1.08); }
 .kp-kick:disabled { cursor: default; }
 .stage-canvas.aim-dragging { cursor: grabbing; }
+
+/* ---- Minimap (M5.4) ---- */
+.minimap {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(10, 18, 12, 0.7);
+  border: 1px solid var(--panel-border);
+  pointer-events: none;
+  line-height: 0;
+}
+.minimap-canvas { border-radius: 5px; }
+.map-hint {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
