@@ -12,7 +12,7 @@ const INFO: Record<Exclude<Route['name'], 'menu'>, PlaceholderInfo> = {
   host: { title: 'Host online', text: 'Create a room and share the code. Coming in M9–M10.' },
   join: { title: 'Join online', text: 'Join a friend’s room with a code. Coming in M9–M10.' },
   practice: { title: 'Practice', text: 'Solo kicking sandbox. Coming in M5.' },
-  lab: { title: 'Physics Lab', text: 'Dev tool: dummies, kick inputs, event log, live constants. Coming in M4.' },
+  lab: { title: 'Physics Lab', text: 'Dev tool: dummies, kick inputs, event log, live constants. It needs WebGL.' },
 };
 
 const MENU_LINKS: [string, string][] = [

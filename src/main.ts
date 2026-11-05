@@ -1,6 +1,7 @@
 // Boot: DOM layers → 3D stage (if WebGL is available) → router.
 import './ui/styles.css';
 import { createInspectView } from './app/inspect';
+import { createLabView } from './app/lab';
 import { getFlags, startRouter, type Route } from './app/router';
 import { DEFAULT_SETTINGS } from './game/settings';
 import { createFpsCounter } from './render/debug';
@@ -36,14 +37,29 @@ function tryCreateStage(): Stage | null {
 }
 
 const stage = tryCreateStage();
-if (stage) {
-  createInspectView(stage, derivePitch(DEFAULT_SETTINGS), { debug: flags.debug, overlay: uiEl });
-  if (flags.debug) createFpsCounter(stage, uiEl);
+if (stage && flags.debug) createFpsCounter(stage, uiEl);
+const pitch = derivePitch(DEFAULT_SETTINGS);
+
+/** The 3D view for the current route: the Lab has its own, everything else shares the inspect view (until M5/M7). */
+type ViewKind = 'inspect' | 'lab';
+let view: { kind: ViewKind; dispose(): void } | null = null;
+
+function ensureView(kind: ViewKind): void {
+  if (!stage || view?.kind === kind) return;
+  view?.dispose();
+  view = null;
+  const v =
+    kind === 'lab'
+      ? createLabView(stage, pitch, { debug: flags.debug, overlay: screenEl })
+      : createInspectView(stage, pitch, { debug: flags.debug, overlay: uiEl });
+  view = { kind, dispose: () => v.dispose() };
 }
 
 function showRoute(route: Route): void {
+  const kind: ViewKind = route.name === 'lab' ? 'lab' : 'inspect';
   clear(screenEl);
-  screenEl.append(placeholderScreen(route, { dev: import.meta.env.DEV || flags.debug }));
+  ensureView(kind);
+  if (kind !== 'lab' || !stage) screenEl.append(placeholderScreen(route, { dev: import.meta.env.DEV || flags.debug }));
   document.title = route.name === 'menu' ? 'Footy' : `Footy · ${route.name}`;
 }
 
