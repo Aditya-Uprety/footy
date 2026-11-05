@@ -10,6 +10,7 @@
 // after the last playback. Ghost takers (kickoff, throw-in, corner) put the
 // camera behind the ball spot; goal kicks and catches go to the keeper.
 import * as THREE from 'three';
+import { angleDiff } from '../shared/math';
 import { defaultYaw } from '../game/host';
 import { activeSeat, kickCaps, kickOrigin } from '../game/rules';
 import { otherTeam, type GameState } from '../game/types';
@@ -34,7 +35,7 @@ import {
   TEAM_KIT,
   timerText,
 } from './matchText';
-import type { Denial, Session, SessionKick } from './session';
+import type { Denial, Session, SessionAim, SessionKick } from './session';
 import { createShotTimer } from './shotTimer';
 
 export interface PlayViewOptions {
@@ -128,8 +129,34 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     const t = turnOf(shown);
     if (!t) return;
     flow.startTurn(t, { instant, spectate: !isLocalTurn(shown) });
+    // The kicker may have started turning while we were still watching the last kick.
+    if (remoteAim?.turnId === shown.turnId) flow.followYaw(remoteAim.yaw);
     render();
   }
+
+  // ---- aim stream (§8.2 aim, ≤ 10 Hz; M10.3) ---------------------------------
+  /** Seconds between streamed yaws. */
+  const AIM_STREAM_DT = 0.1;
+  let aimClock = 0;
+  let lastSent: { turnId: number; yaw: number } | null = null;
+  /** The other seat's latest streamed yaw (its turn may not be on screen yet). */
+  let remoteAim: SessionAim | null = null;
+  function streamAim(dt: number): void {
+    aimClock += dt;
+    if (aimClock < AIM_STREAM_DT || flow.phase !== 'aim' || flow.spectating) return;
+    aimClock = 0;
+    const seat = activeSeat(shown);
+    if (seat === null) return;
+    const yaw = aim.state.yaw;
+    if (lastSent && lastSent.turnId === shown.turnId && Math.abs(angleDiff(lastSent.yaw, yaw)) < 1e-3) return;
+    lastSent = { turnId: shown.turnId, yaw };
+    // Hot-seat too: the host guard kicks with the last streamed yaw (§8.4).
+    session.aim(seat, shown.turnId, yaw);
+  }
+  const offAim = session.onAim((a) => {
+    remoteAim = a;
+    if (a.turnId === shown.turnId && flow.spectating) flow.followYaw(a.yaw);
+  });
 
   function play(k: SessionKick): void {
     playing = k;
@@ -249,6 +276,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     }
     if (timer.running) renderTimer();
     halftime?.update(dt);
+    streamAim(dt);
   });
 
   beginTurn();
@@ -280,6 +308,7 @@ export function createPlayView(opts: PlayViewOptions): PlayView {
     },
     dispose() {
       offFrame();
+      offAim();
       timer.stop();
       halftime?.dispose();
       halftime = null;

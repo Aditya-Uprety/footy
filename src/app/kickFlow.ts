@@ -17,7 +17,7 @@ import type { BallView } from '../render/ball';
 import { createPlaybackCamera, type PlaybackCamMode } from '../render/cameras';
 import { KickPlayback } from '../render/playback';
 import type { Stage } from '../render/scene';
-import { easeInOutCubic } from '../shared/math';
+import { angleDiff, easeInOutCubic } from '../shared/math';
 import type { Pitch } from '../shared/pitch';
 import type { KickCaps } from '../sim/kick';
 import type { KickInput, KickOrigin, KickResult, SimEvent } from '../sim/types';
@@ -40,6 +40,15 @@ export const HIDE_KICKER_AT = 0.6;
  * and the ball within KICKER_SIGHT_HALFWIDTH of the sight line (horizontal), m.
  */
 export const KICKER_NEAR_CAMERA = 2.6;
+/** Spectator: how fast the view catches up with the streamed yaw (1/s; ~10 Hz updates are smoothed). */
+export const FOLLOW_RATE = 8;
+
+/** One frame of the spectator's yaw smoothing: from `yaw` toward `target` along the shortest arc. */
+export function followStep(yaw: number, target: number, dt: number, rate = FOLLOW_RATE): number {
+  const d = angleDiff(yaw, target);
+  if (Math.abs(d) < 1e-4) return target;
+  return yaw + d * (1 - Math.exp(-rate * dt));
+}
 export const KICKER_SIGHT_HALFWIDTH = 1.2;
 
 /** True if a kicker at (kx, kz) would block the camera's view of the ball (all horizontal). */
@@ -88,7 +97,7 @@ export interface KickFlowOptions {
   pitch: Pitch;
   ball: Pick<BallView, 'setPosition' | 'roll' | 'spin' | 'resetRotation'>;
   players: FlowPlayers;
-  aim: Pick<AimController, 'state' | 'origin' | 'setOrigin' | 'pose' | 'ballPos' | 'active' | 'inputEnabled'>;
+  aim: Pick<AimController, 'state' | 'origin' | 'setOrigin' | 'setYaw' | 'pose' | 'ballPos' | 'active' | 'inputEnabled'>;
   panel: FlowPanel;
   /** The player kicked (wind-up started). Answer with flow.play(result). */
   requestKick(input: KickInput, turn: Turn): void;
@@ -111,6 +120,10 @@ export interface KickFlow {
   readonly camMode: PlaybackCamMode;
   /** True while the turn belongs to the other seat (online): the view follows, the controls stay off. */
   readonly spectating: boolean;
+  /** Spectator: the viewer chose the broadcast camera while watching (C; kept between turns). */
+  readonly spectatorBroadcast: boolean;
+  /** Spectator: the kicker's latest streamed yaw; the view eases toward it. */
+  followYaw(yaw: number): void;
   /** Begins a turn: eases the camera to the kicker (or jumps there if `instant`); `spectate` = someone else kicks. */
   startTurn(turn: Turn, opts?: { instant?: boolean; spectate?: boolean }): void;
   /** Starts the wind-up (same as KICK / Space). Ignored outside the aim phase. */
@@ -153,6 +166,11 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
   let tToFov = 60;
   let kickerHidden = false;
   let spectating = false;
+  /** Viewer preference while spectating (C). */
+  let spectBroadcast = false;
+  let spectCam: ReturnType<typeof createPlaybackCamera> | null = null;
+  let followTarget: number | null = null;
+  const still = { x: 0, y: 0, z: 0 };
 
   function setPhase(p: FlowPhase): void {
     if (phase === p) return;
@@ -166,13 +184,43 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
   }
 
   function enterAim(): void {
-    kickerHidden = true;
-    players.setHidden(kickerIdOf(turn?.origin));
-    aim.active = true;
+    const broadcast = spectating && spectBroadcast;
+    kickerHidden = !broadcast;
+    players.setHidden(broadcast ? null : kickerIdOf(turn?.origin));
+    aim.active = !broadcast;
+    if (broadcast) startSpectCam();
     aim.inputEnabled = !spectating;
     panel.setCaps(turn?.caps ?? {});
     panel.setEnabled(!spectating);
     setPhase('aim');
+  }
+
+  /** Spectator's broadcast view of the waiting ball (blends in from the current view). */
+  function startSpectCam(): void {
+    const cam = camera();
+    if (!cam) return;
+    aim.active = false;
+    spectCam = createPlaybackCamera(cam, opts.pitch, 'chase');
+    spectCam.start(aim.ballPos(), aim.state.yaw, aim.state.height);
+    spectCam.setMode('broadcast');
+  }
+
+  /** Eased move from wherever the camera is to the aim pose; enterAim at the end. */
+  function transitionToAim(): void {
+    const cam = camera();
+    if (!cam) {
+      enterAim();
+      return;
+    }
+    const pose = aim.pose();
+    tFromPos.copy(cam.position);
+    lookTarget(cam, tFromTarget);
+    tToPos.copy(pose.position);
+    tToTarget.copy(pose.target);
+    tFromFov = cam.fov;
+    tToFov = aim.state.fov;
+    timer = 0;
+    setPhase('transition');
   }
 
   function placeBallAtStart(): void {
@@ -183,6 +231,8 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
 
   function startPlayback(res: KickResult): void {
     pending = null;
+    spectCam = null;
+    followTarget = null;
     const kickerId = kickerIdOf(turn?.origin);
     if (kickerId !== null) players.setYaw(kickerId, res.input.yaw);
     ball.resetRotation();
@@ -218,7 +268,19 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
   function frame(dt: number): void {
     switch (phase) {
       case 'aim':
-        if (!spectating) panel.update(dt);
+        if (!spectating) {
+          panel.update(dt);
+          break;
+        }
+        if (followTarget !== null && followTarget !== aim.state.yaw) {
+          aim.setYaw(followStep(aim.state.yaw, followTarget, dt));
+          // The aim rig moves the ball only while it drives the camera.
+          if (!aim.active) placeBallAtStart();
+        }
+        if (spectCam) {
+          const b = aim.ballPos();
+          spectCam.update(dt, b, still);
+        }
         break;
       case 'windup': {
         timer += dt;
@@ -328,10 +390,18 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     get spectating() {
       return spectating;
     },
+    get spectatorBroadcast() {
+      return spectBroadcast;
+    },
+    followYaw(yaw) {
+      if (spectating && Number.isFinite(yaw)) followTarget = yaw;
+    },
     startTurn(next, o = {}) {
       const cam = camera();
       turn = next;
       spectating = o.spectate === true;
+      spectCam = null;
+      followTarget = null;
       pending = null;
       aim.active = false;
       aim.inputEnabled = false;
@@ -349,15 +419,11 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       // Everyone is visible during the move; the new kicker hides once the camera is close.
       kickerHidden = false;
       players.setHidden(null);
-      const pose = aim.pose();
-      tFromPos.copy(cam.position);
-      lookTarget(cam, tFromTarget);
-      tToPos.copy(pose.position);
-      tToTarget.copy(pose.target);
-      tFromFov = cam.fov;
-      tToFov = aim.state.fov;
-      timer = 0;
-      setPhase('transition');
+      if (spectating && spectBroadcast) {
+        enterAim(); // the broadcast rig blends in from here
+        return;
+      }
+      transitionToAim();
     },
     kick() {
       if (phase !== 'aim' || !turn || spectating) return false;
@@ -395,6 +461,19 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       fastForward = on;
     },
     toggleCamera() {
+      if (spectating && phase === 'aim') {
+        // Watching the other seat aim: their view ↔ broadcast (§6.1).
+        spectBroadcast = !spectBroadcast;
+        if (spectBroadcast) {
+          kickerHidden = false;
+          players.setHidden(null);
+          startSpectCam();
+        } else {
+          spectCam = null;
+          transitionToAim();
+        }
+        return;
+      }
       camMode = camMode === 'chase' ? 'broadcast' : 'chase';
       if (pcam && (phase === 'playback' || phase === 'hold')) pcam.setMode(camMode);
     },

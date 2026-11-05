@@ -45,6 +45,9 @@ function rig() {
       origin = o;
       state = { ...state, yaw };
     },
+    setYaw(yaw: number) {
+      state = { ...state, yaw };
+    },
     pose: () => aimStatePose(origin, state),
     ballPos: () => aimBall(origin, state.yaw),
     active: false,
@@ -204,5 +207,64 @@ describe('kickerBlocksView', () => {
     expect(kickerBlocksView(0, 0, 20, 0, 5, 2)).toBe(false); // off to the side
     expect(kickerBlocksView(0, 0, 20, 0, -5, 0)).toBe(false); // behind the camera
     expect(kickerBlocksView(0, 0, 20, 0, 25, 0)).toBe(false); // beyond the ball
+  });
+});
+
+describe('spectating (online, the other seat kicks)', () => {
+  it('keeps the controls off, never kicks, and eases toward the streamed yaw', () => {
+    const r = rig();
+    r.flow.startTurn(kicker1, { instant: true, spectate: true });
+    expect(r.flow.phase).toBe('aim');
+    expect(r.flow.spectating).toBe(true);
+    expect(r.aim.active).toBe(true); // the view follows the aim rig
+    expect(r.aim.inputEnabled || r.panel.enabled).toBe(false);
+    expect(r.flow.kick()).toBe(false);
+    r.pressKick();
+    expect(r.log.requested).toHaveLength(0);
+
+    r.flow.followYaw(1);
+    r.tick(0.1);
+    const mid = r.aim.state.yaw;
+    expect(mid).toBeGreaterThan(0.2);
+    expect(mid).toBeLessThan(1);
+    r.tick(1.5);
+    expect(r.aim.state.yaw).toBeCloseTo(1, 4);
+    // Shortest arc across ±π.
+    r.flow.followYaw(-3.1);
+    r.tick(0.05);
+    expect(r.aim.state.yaw).toBeGreaterThan(1);
+  });
+
+  it('plays the result that arrives from the host, and a new local turn re-enables the controls', () => {
+    const r = rig();
+    r.flow.startTurn(kicker1, { instant: true, spectate: true });
+    const res = simulateKick({ input: { yaw: 0, power: 0.3, curve: 0, loft: 0 }, origin: kicker1.origin, team: 0 });
+    r.flow.play(res);
+    expect(r.flow.phase).toBe('playback');
+    r.tick(20);
+    expect(r.log.ended).toHaveLength(1);
+    r.flow.startTurn(kicker1, { instant: true });
+    expect(r.flow.spectating).toBe(false);
+    expect(r.aim.inputEnabled && r.panel.enabled).toBe(true);
+  });
+
+  it('C switches the spectator between the kicker view and broadcast (kept for the next spectated turn)', () => {
+    const r = rig();
+    r.flow.startTurn(kicker1, { instant: true, spectate: true });
+    r.flow.toggleCamera();
+    expect(r.flow.spectatorBroadcast).toBe(true);
+    expect(r.aim.active).toBe(false);
+    expect(r.view.hidden).toBe(null); // the kicker is visible from the stand
+    r.tick(2);
+    expect(r.camera.position.y).toBeGreaterThan(10);
+    r.flow.startTurn(kicker1, { spectate: true });
+    expect(r.flow.phase).toBe('aim');
+    expect(r.aim.active).toBe(false);
+    r.flow.toggleCamera();
+    expect(r.flow.phase).toBe('transition');
+    r.tick(1.2);
+    expect(r.flow.phase).toBe('aim');
+    expect(r.aim.active).toBe(true);
+    expect(r.view.hidden).toBe(1);
   });
 });
