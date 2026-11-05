@@ -1,6 +1,5 @@
-// Main menu and hot-seat setup (PLAN §9, M7.1). Minimal for now: Hot-seat,
-// Practice and (dev builds) the Physics Lab; online and How-to-play arrive in
-// M9 and M13.
+// Main menu and hot-seat setup (PLAN §9, M7.1). Hot-seat, online host/join
+// (M9), Practice and (dev builds) the Physics Lab; How-to-play arrives in M13.
 import { defaultName, NAME_MAX } from '../game/rules';
 import type { Seat } from '../game/types';
 import { h } from './dom';
@@ -23,10 +22,11 @@ export function menuScreen(opts: MenuOptions): HTMLElement {
       'nav',
       { class: 'menu-items' },
       item('#/hotseat', 'Play hot-seat', 'Two players, one device', true),
+      item('#/host', 'Host online', 'Create a room and send the link'),
+      item('#/join', 'Join online', 'Enter a friend’s room code'),
       item('#/practice', 'Practice', 'Kick around on your own'),
       opts.dev ? item('#/lab', 'Physics Lab', 'Dev tool') : null,
     ),
-    h('p', { class: 'menu-foot' }, 'Online play is on its way.'),
   );
 }
 

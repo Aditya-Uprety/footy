@@ -3,8 +3,9 @@ import './ui/styles.css';
 import { createHotseatMode } from './app/hotseat';
 import { createInspectView, type InspectView } from './app/inspect';
 import { createLabView } from './app/lab';
+import { createOnlineMode } from './app/online';
 import { createPracticeView } from './app/practice';
-import { getFlags, startRouter, type Route } from './app/router';
+import { getFlags, routeToHash, startRouter, type Route } from './app/router';
 import { DEFAULT_SETTINGS } from './game/settings';
 import { createFpsCounter } from './render/debug';
 import { createStage, type Stage } from './render/scene';
@@ -48,38 +49,58 @@ const pitch = derivePitch(DEFAULT_SETTINGS);
  * The mode for the current route. Lab, Practice and Hot-seat bring their own
  * views; the menu and the remaining placeholders share the inspect view.
  */
-type ModeKind = 'inspect' | 'lab' | 'practice' | 'hotseat';
-let mode: { kind: ModeKind; inspect: InspectView | null; dispose(): void } | null = null;
+type ModeKind = 'inspect' | 'lab' | 'practice' | 'hotseat' | 'online';
+let mode: { kind: ModeKind; key: string; inspect: InspectView | null; dispose(): void } | null = null;
 
-function ensureMode(kind: ModeKind): void {
-  if (mode?.kind === kind) return;
+function ensureMode(kind: ModeKind, route: Route): void {
+  // Online modes restart when the route changes (host ↔ join, another code).
+  const key = kind === 'online' ? routeToHash(route) : kind;
+  if (mode?.key === key) return;
   mode?.dispose();
   mode = null;
   if (kind === 'hotseat') {
     // Works without WebGL up to the draft (setup and toss are DOM only).
     const m = createHotseatMode(stage, { debug: flags.debug, seed: flags.seed, autoplace: flags.autoplace, overlay: screenEl });
-    mode = { kind, inspect: null, dispose: () => m.dispose() };
+    mode = { kind, key, inspect: null, dispose: () => m.dispose() };
+    return;
+  }
+  if (kind === 'online' && (route.name === 'host' || route.name === 'join')) {
+    // DOM only (the turning pitch behind it needs WebGL, the lobby doesn't).
+    const m = createOnlineMode(stage, {
+      role: route.name,
+      code: route.name === 'join' ? route.code : null,
+      debug: flags.debug,
+      overlay: screenEl,
+    });
+    mode = { kind, key, inspect: null, dispose: () => m.dispose() };
     return;
   }
   if (!stage) return;
   if (kind === 'lab') {
     const v = createLabView(stage, pitch, { debug: flags.debug, overlay: screenEl });
-    mode = { kind, inspect: null, dispose: () => v.dispose() };
+    mode = { kind, key, inspect: null, dispose: () => v.dispose() };
   } else if (kind === 'practice') {
     const v = createPracticeView(stage, pitch, { debug: flags.debug, seed: flags.seed, overlay: screenEl });
-    mode = { kind, inspect: null, dispose: () => v.dispose() };
+    mode = { kind, key, inspect: null, dispose: () => v.dispose() };
   } else {
     const v = createInspectView(stage, pitch, { debug: flags.debug, overlay: uiEl });
-    mode = { kind, inspect: v, dispose: () => v.dispose() };
+    mode = { kind, key, inspect: v, dispose: () => v.dispose() };
   }
 }
 
 function showRoute(route: Route): void {
-  const kind: ModeKind = route.name === 'lab' || route.name === 'practice' || route.name === 'hotseat' ? route.name : 'inspect';
-  clear(screenEl);
-  ensureMode(kind);
+  const kind: ModeKind =
+    route.name === 'lab' || route.name === 'practice' || route.name === 'hotseat'
+      ? route.name
+      : route.name === 'host' || route.name === 'join'
+        ? 'online'
+        : 'inspect';
+  const key = kind === 'online' ? routeToHash(route) : kind;
+  // The online lobby redraws only when its route really changes (it rewrites #/join → #/join/CODE itself).
+  if (mode?.key !== key || kind !== 'online') clear(screenEl);
+  ensureMode(kind, route);
   if (route.name === 'menu') screenEl.append(menuScreen({ dev }));
-  else if (kind === 'inspect' || (!stage && route.name !== 'hotseat')) screenEl.append(placeholderScreen(route, { dev }));
+  else if (kind === 'inspect' || (!stage && route.name !== 'hotseat' && kind !== 'online')) screenEl.append(placeholderScreen(route, { dev }));
   if (mode?.inspect) {
     // The menu backdrop slowly turns around the pitch.
     mode.inspect.controls.autoRotate = route.name === 'menu';

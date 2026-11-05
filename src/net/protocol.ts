@@ -6,7 +6,8 @@
 // game legality (seat, phase, turn) is HostCore's job.
 //
 // ping / pong go both ways (each side measures its own RTT and keeps the
-// heartbeat alive), see §14 Changelog M9.
+// heartbeat alive), welcome carries the host's name for the lobby, and the
+// guest may say bye too; see §14 Changelog M9.
 
 import type { KickInput, KickResult, Outcome, SimEvent } from '../sim/types';
 import type { GameState, Intent, IntentType, Possession, Settings, Violation } from '../game/types';
@@ -24,11 +25,13 @@ export type GuestMessage =
   | { v: 1; t: 'intent'; intent: Intent }
   | { v: 1; t: 'aim'; turnId: number; yaw: number }
   | { v: 1; t: 'ping'; ts: number }
-  | { v: 1; t: 'pong'; ts: number };
+  | { v: 1; t: 'pong'; ts: number }
+  /** Leaving on purpose (Leave, Menu, tab closed), so the host notices at once. */
+  | { v: 1; t: 'bye'; reason: string };
 
 /** Host → guest. */
 export type HostMessage =
-  | { v: 1; t: 'welcome'; seat: 1; resume: string; proto: number }
+  | { v: 1; t: 'welcome'; seat: 1; resume: string; proto: number; name?: string }
   | { v: 1; t: 'reject'; reason: RejectReason }
   | { v: 1; t: 'state'; state: GameState }
   | { v: 1; t: 'kick'; result: WireKickResult; next: GameState }
@@ -301,6 +304,8 @@ export function parseGuestMessage(x: unknown): GuestMessage | null {
     case 'ping':
     case 'pong':
       return isTs(x) ? (x as GuestMessage) : null;
+    case 'bye':
+      return isStr(x.reason) ? (x as GuestMessage) : null;
     default:
       return null;
   }
@@ -314,7 +319,9 @@ export function parseHostMessage(x: unknown): HostMessage | null {
   if (!hasVersion(x)) return null;
   switch (x.t) {
     case 'welcome':
-      return x.seat === 1 && isStr(x.resume, MAX_TOKEN_LEN) && isInt(x.proto) ? (x as HostMessage) : null;
+      return x.seat === 1 && isStr(x.resume, MAX_TOKEN_LEN) && isInt(x.proto) && (x.name === undefined || isStr(x.name, MAX_NAME_LEN))
+        ? (x as HostMessage)
+        : null;
     case 'state':
       return isGameState(x.state) ? (x as HostMessage) : null;
     case 'kick':

@@ -50,8 +50,10 @@ export function mapPeerError(type: string | undefined): NetErrorCode {
   }
 }
 
+/** A NetError; the raw PeerJS detail is appended only where the plain text is vague. */
 export function netError(code: NetErrorCode, detail?: string): NetError {
-  return { code, message: detail ? `${netErrorText(code)} (${detail})` : netErrorText(code) };
+  const vague = code === 'network' || code === 'unknown';
+  return { code, message: detail && vague ? `${netErrorText(code)} (${detail})` : netErrorText(code) };
 }
 
 /** The env vars read by `peerOptions` (Vite exposes VITE_* on import.meta.env). */
@@ -162,7 +164,7 @@ export class PeerTransport extends BaseTransport {
     const c = this.conn;
     this.conn = null;
     try {
-      c?.close();
+      c?.close({ flush: true });
     } catch {
       /* already gone */
     }

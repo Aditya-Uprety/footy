@@ -198,6 +198,7 @@ footy/
    │  ├─ protocol.ts               # PURE: message types, PROTOCOL_VERSION, type guards
    │  ├─ transport.ts              # Transport interface + LoopbackTransport
    │  ├─ peer.ts                   # PeerJS transport, room codes, ICE config
+   │  ├─ link.ts                   # HostLink / GuestLink: hello/welcome/reject, ping/pong RTT, silence → lost, seat reservation (M9.4)
    │  ├─ hostSession.ts  guestSession.ts
    │  └─ *.test.ts
    ├─ render/                      # Three.js only
@@ -222,6 +223,7 @@ footy/
       ├─ mapControls.ts            # hold-Tab overhead map + minimap, shared by practice and play (M8)
       ├─ placementView.ts  placementModel.ts  aimController.ts   # placementModel = pure per-pick state (M7)
       ├─ kickFlow.ts               # one turn: aim → wind-up → playback → eased move to the next kicker (M5.3; reused by M8/M10)
+      ├─ online.ts                 # #/host and #/join lobby modes: PeerJS room + HostLink/GuestLink → lobby UI, connection overlay (M9)
       ├─ practice.ts  practiceRules.ts  lab.ts
       └─ audio.ts (M14)
 ```
@@ -478,19 +480,20 @@ Guest → Host:
 | `hello` | name, proto, resume? | on connect |
 | `intent` | intent: Intent | toss choice, placement pick, kick, rematch |
 | `aim` | turnId, yaw | ≤ 10 Hz while aiming (spectating only) |
-| `ping` | ts | every 2 s |
+| `ping` / `pong` | ts | every 2 s / reply to the host's ping |
+| `bye` | reason | leaving on purpose (Leave, Menu, tab closed) |
 
 Host → Guest:
 
 | t | Fields | When |
 |---|---|---|
-| `welcome` | seat (1), resume, proto | accepted |
+| `welcome` | seat (1), resume, proto, name? (host's name) | accepted |
 | `reject` | reason: 'full' \| 'version' \| 'ended' | refused, then close |
 | `state` | state: GameState | after every change (full snapshot) |
 | `kick` | result: WireKickResult, next: GameState | after each kick (frames as base64) |
 | `aim` | turnId, yaw | host aiming, ≤ 10 Hz |
 | `denied` | intentType, reason, violations? | an intent was refused (UI shows why) |
-| `pong` | ts | reply to ping |
+| `ping` / `pong` | ts | every 2 s / reply to the guest's ping |
 | `bye` | reason | host leaving |
 
 ### 8.3 Sequences
@@ -506,7 +509,7 @@ Host → Guest:
 - The placement timer, if enabled, is enforced by the host in the same way.
 
 ### 8.5 Connection loss and resume
-- Heartbeat: ping every 2 s; no traffic for 8 s → overlay "Connection lost — reconnecting…".
+- Heartbeat: both sides ping every 2 s (each measures its own RTT); no traffic for 8 s → overlay "Connection lost — reconnecting…" (guest) / "Opponent disconnected" (host).
 - The guest retries with backoff 1, 2, 4, 8 … s for up to 60 s, sending its `resume` token (from `welcome`, kept in sessionStorage per room). The host keeps seat 1 reserved for 120 s and re-sends `state` on resume.
 - If the host's Peer loses signaling (`disconnected`), call `peer.reconnect()`.
 - Optional (M10): host-refresh recovery (persist GameState in sessionStorage, re-register the same id).
