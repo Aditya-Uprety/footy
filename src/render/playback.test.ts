@@ -189,3 +189,47 @@ describe('KickPlayback', () => {
     expect(calls).toEqual(['pos', 'spin']);
   });
 });
+
+describe('replay of a stored kick (M15.A)', () => {
+  const players: WorldPlayer[] = [{ id: 1, team: 1, x: 18, z: 0, gk: false }];
+  const result = kick(0.9, { loft: 0.3, yaw: 0, players });
+
+  function run(realDt: number, rate: number): { path: Vec3[]; events: string[]; times: number[] } {
+    const path: Vec3[] = [];
+    const times: number[] = [];
+    const events: string[] = [];
+    const pb = new KickPlayback(result, { onEvent: (e) => events.push(e.kind) });
+    let guard = 0;
+    while (pb.t < pb.duration && guard++ < 100000) {
+      pb.update(realDt * (rate === 1 ? 1 : rate));
+      path.push({ ...pb.pos });
+      times.push(pb.t);
+    }
+    return { path, events, times };
+  }
+
+  it('a second playback of the same result retraces the ball exactly, event for event', () => {
+    const a = run(1 / 60, 1);
+    const b = run(1 / 60, 1);
+    expect(b.path).toEqual(a.path);
+    expect(b.events).toEqual(a.events);
+    expect(a.events[0]).toBe('kick');
+  });
+
+  it('playback does not depend on the step size (so slow motion hits the same points)', () => {
+    const full = new KickPlayback(result);
+    const slow = new KickPlayback(result);
+    const p = v3();
+    for (let i = 0; i < 40; i++) {
+      full.update(0.1);
+      slow.update(0.05);
+      slow.update(0.05);
+      expect(slow.t).toBeCloseTo(full.t, 9);
+      expect(slow.pos.x).toBeCloseTo(full.pos.x, 9);
+      expect(slow.pos.y).toBeCloseTo(full.pos.y, 9);
+      expect(slow.pos.z).toBeCloseTo(full.pos.z, 9);
+      sampleFrames(result.frames, full.t, p);
+      expect(full.pos.x).toBeCloseTo(p.x, 6);
+    }
+  });
+});
