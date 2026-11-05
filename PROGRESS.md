@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M11 — Deploy to the web (M0–M10 done)
-- **Next task:** M11.1 Relative base + production smoke test
+- **Next task:** M11.2 GitHub repo + Pages workflow (ask before pushing)
 - **Model for next task:** Sonnet 5.5 · High effort
-- **Last updated:** 2026-11-05 (M10 complete; two-device check on the user's Wi-Fi still to do by the user)
+- **Last updated:** 2026-11-05 (M11.1 done; two-device check on the user's Wi-Fi from M10 still to do by the user)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -104,7 +104,7 @@
 - [x] M10.A Acceptance checks passed (two windows + two devices) and reported to the user
 
 ## M11 — Deploy to the web · Sonnet 5.5 High
-- [ ] M11.1 Relative base + production smoke test
+- [x] M11.1 Relative base + production smoke test
 - [ ] M11.2 GitHub repo + Pages workflow (ask before pushing)
 - [ ] M11.3 README: play / host / join + troubleshooting
 - [ ] M11.A Acceptance checks passed (public URL, cross-network) and reported to the user
@@ -170,3 +170,4 @@
 - 2026-11-05 — M9.A: verified in the browser pane with two/three tabs on the real PeerJS cloud server (the pane reaches the other chat's dev server on 5173 via its URL; it has no WebGL, but the lobby is DOM only): host shows a 5-character code; the copied link (`…/#/join/CODE`, query flags dropped) opens straight into the guest lobby and auto-joins; both show "Connected · RTT 0–1 ms" and the other's name; a third tab gets "Room full"; code ZZ9Z2 gets "Room not found"; guest → Menu: host shows "Opponent disconnected" within 1 s (guest bye); killing the guest tab: 8.4 s (heartbeat; the pane closes tabs without pagehide); host → Menu: guest shows "Host left" at once; killing the host tab: guest "Connection lost" overlay with Reconnect after ~8 s; rejoin after a disconnect works; Copy link shows "Copied ✓" (legacy copy fallback when the clipboard API is refused). Only the expected WebGL console errors. `npm run build` puts PeerJS in its own chunk.
 - 2026-11-05 — M10 notes: `net/hostSession.ts` HostSession = HostCore + HostLink (state snapshot on every change and on every (re)join; `kick{result base64, next}`; `denied`; guest aims forwarded only from the aiming seat; guards ticked every 500 ms). `net/guestSession.ts` GuestSession (seat 1; drops older revs; derives the kick's seat from its previous state; refuses off-turn intents locally via `guestIntentBlock`; `attach(link)` after a reconnect keeps the same match view). `game/serialize.ts` = pure base64 + `toWireKick`/`fromWireKick`. `Session` gained `aim()` / `onAim()`. `app/online.ts`: host Start → HostSession + match view (seat reserved RESERVE_MS from then on); guest's first snapshot → match view; mid-match guest drop → automatic retries 1-2-4-8-16-29 s (overlay shows the attempt), then "Try again"; host sees "Opponent disconnected — waiting…" until the resume. kickFlow `startTurn(turn, { spectate })`: no input, no shot timer, kick bar hidden, view eases to the streamed yaw (`followYaw`), C = kicker view ↔ broadcast while spectating. Placement timer countdown in the pick banner (both devices) with auto-fill at 0. Dev flags `?shot=N` / `?place=N`. `window.__online` now also exposes `session` and `match`. Host-refresh recovery (optional in §8.5) was not done. PeerJS logging is off (`debug: 0`); our own error mapping still shows every failure in the UI.
 - 2026-11-05 — M10.A: verified with two headless Chrome pages on the real PeerJS cloud server (`?autoplace`, scripts in the chat's scratchpad; pattern: host page evals `__online.room.code`, clicks Start match, guest opens `#/join/CODE`): full 40-kick match to full-time on both, identical rev, score (2–0) and a hash of all 40 kicks' outcome / end point / frame count; half-time and full-time cards on both; Rematch from both → new toss. Opponent's turn: kick bar hidden, aim input off, HUD "Watching <name>…", spectator yaw equals the kicker's streamed yaw at kick time on every turn. `?shot=10` with idle players: each side's own timer auto-kicked its turn. Forced guest drop → "Reconnecting… (attempt 1 of 6)" → back within ~5 s; guest page reload mid-match → rejoined with the same state and played on. No console errors (after fixing PeerTransport sending/flushing on dead connections). `npm run check` 341 tests green. Not done here: two real devices on one Wi-Fi (user check), and the browser pane (no WebGL; the lobby DOM was already checked in M9.A).
+- 2026-11-05 — M11.1: `base: './'` was already set in M0; verified. `npm run build` → `dist/index.html` references `./assets/…` only (JS 774 kB / 211 kB gzip, PeerJS chunk 87 kB, lil-gui chunk 31 kB, sourcemaps on). `vite preview` on 4173 serves the menu and the lazy chunks (200). Headless Chrome (`webgl-shot`) on `http://localhost:4173/?autoplace&seed=3#/hotseat`: draft skipped, kickoff played, HUD moved to "Kick 2/40", no console errors. `window.__match` exists in the production build too (harmless). `npm run check` 341 tests green.
