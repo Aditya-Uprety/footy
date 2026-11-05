@@ -15,26 +15,8 @@ const INFO: Record<Exclude<Route['name'], 'menu'>, PlaceholderInfo> = {
   lab: { title: 'Physics Lab', text: 'Dev tool: dummies, kick inputs, event log, live constants. It needs WebGL.' },
 };
 
-const MENU_LINKS: [string, string][] = [
-  ['#/hotseat', 'Play hot-seat'],
-  ['#/host', 'Host online'],
-  ['#/join', 'Join online'],
-  ['#/practice', 'Practice'],
-];
-
-/** Builds the placeholder panel for a route. */
-export function placeholderScreen(route: Route, opts: { dev: boolean }): HTMLElement {
-  if (route.name === 'menu') {
-    const links = [...MENU_LINKS];
-    if (opts.dev) links.push(['#/lab', 'Physics Lab']);
-    return h(
-      'div',
-      { class: 'panel placeholder', 'data-screen': 'menu' },
-      h('h1', {}, 'Footy'),
-      h('p', {}, 'Turn-based 3D football. Menu placeholder: the real menu arrives in M7.'),
-      h('nav', {}, ...links.map(([href, label]) => h('a', { href }, label))),
-    );
-  }
+/** Builds the placeholder panel for a route that has no real screen yet. */
+export function placeholderScreen(route: Exclude<Route, { name: 'menu' }>, _opts: { dev: boolean }): HTMLElement {
   const info = INFO[route.name];
   const extra =
     route.name === 'join'

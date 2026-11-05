@@ -6,11 +6,14 @@ import {
   activeSeat,
   applyPick,
   chooseRole,
+  defaultName,
   kick,
   kickCaps,
+  NAME_MAX,
   newMatch,
   resolveOutcome,
   RuleError,
+  sanitizeName,
   seatOfTeam,
   teamOfSeat,
   voteRematch,
@@ -40,6 +43,22 @@ function throws(f: () => unknown, re: RegExp): RuleError {
   }
   throw new Error('expected a RuleError');
 }
+
+describe('seat names', () => {
+  it('sanitizes names: trims, collapses spaces, drops control characters, caps the length', () => {
+    expect(sanitizeName('  Ann   Lee ', 'x')).toBe('Ann Lee');
+    expect(sanitizeName('A\u0000b\nc', 'x')).toBe('Ab c');
+    expect(sanitizeName('x'.repeat(40), 'f')).toHaveLength(NAME_MAX);
+    expect(sanitizeName('   ', 'Player 2')).toBe('Player 2');
+    expect(sanitizeName(42, 'Player 1')).toBe('Player 1');
+    expect(sanitizeName('⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽', 'f')).toBe('⚽'.repeat(NAME_MAX));
+  });
+
+  it('newMatch falls back to Player 1 / Player 2', () => {
+    const s = newMatch(defaultSettings(), ['', ' Bob '], createRng(1));
+    expect(s.seatNames).toEqual([defaultName(0), 'Bob']);
+  });
+});
 
 describe('toss and roles (§2.1)', () => {
   it('the host RNG draws the winner; same seed, same winner', () => {

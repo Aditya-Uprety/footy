@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M7 — Toss and placement UI, hot-seat (M0–M6 done)
-- **Next task:** M7.1 Minimal main menu + hot-seat names
+- **Next task:** M7.2 Coin toss + role choice
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M6 complete)
+- **Last updated:** 2026-11-05 (M7.1 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -71,7 +71,7 @@
 - [x] M6.A Acceptance checks passed and reported to the user
 
 ## M7 — Toss and placement UI (hot-seat) · Opus 5.5 High
-- [ ] M7.1 Minimal main menu + hot-seat names
+- [x] M7.1 Minimal main menu + hot-seat names
 - [ ] M7.2 Coin toss + role choice
 - [ ] M7.3 Placement camera, hover validity + reasons, exclusion rings, GK toggle
 - [ ] M7.4 Tentative spots (place, drag, undo, confirm) + pick banner

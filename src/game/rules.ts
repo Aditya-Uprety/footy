@@ -49,13 +49,32 @@ function bump(s: GameState, changes: Partial<GameState>): GameState {
   return { ...s, ...changes, rev: s.rev + 1 };
 }
 
+/** Longest seat name, characters (§2.1.3: names are editable). */
+export const NAME_MAX = 16;
+
+/** Default seat names: "Player 1", "Player 2". */
+export function defaultName(seat: Seat): string {
+  return `Player ${seat + 1}`;
+}
+
+/**
+ * A clean seat name: control characters removed, whitespace collapsed,
+ * trimmed, at most NAME_MAX characters; `fallback` when nothing is left.
+ */
+export function sanitizeName(raw: unknown, fallback: string): string {
+  if (typeof raw !== 'string') return fallback;
+  const clean = raw.replace(/\s+/g, ' ').replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim();
+  const chars = [...clean].slice(0, NAME_MAX).join('').trim();
+  return chars || fallback;
+}
+
 /** A fresh match in the toss phase: the host RNG draws the toss winner (§2.1.2). */
 export function newMatch(settings: Settings, names: [string, string], rng: Rng, rev = 0): GameState {
   return {
     rev,
     phase: 'toss',
     settings: sanitizeSettings(settings),
-    seatNames: [names[0], names[1]],
+    seatNames: [sanitizeName(names[0], defaultName(0)), sanitizeName(names[1], defaultName(1))],
     toss: { winner: rng.int(2) as Seat, teamOfSeat: null },
     pick: 0,
     players: [],
