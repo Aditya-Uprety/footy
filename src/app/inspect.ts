@@ -2,6 +2,8 @@
 // presets on keys 1–4, plus ?debug axes and ruler. Shared by every route
 // until each mode brings its own view (M4 lab, M5 practice, M7 placement).
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { createBallView } from '../render/ball';
+import { PHYS } from '../sim/constants';
 import { createCameraTween, INSPECT_KEYS, inspectPose, type InspectPreset } from '../render/cameras';
 import { createAxes, createRuler } from '../render/debug';
 import { createGoalsView } from '../render/goals';
@@ -31,7 +33,9 @@ export function createInspectView(stage: Stage, pitch: Pitch, opts: InspectOptio
   const env = createEnvironment(stage.scene, pitch);
   const pitchView = createPitchView(pitch, stage.renderer.capabilities.getMaxAnisotropy());
   const goals = createGoalsView(pitch);
-  stage.scene.add(pitchView.group, goals.group);
+  const ball = createBallView();
+  ball.setPosition(0, PHYS.BALL_R, 0);
+  stage.scene.add(pitchView.group, goals.group, ball.group);
 
   const camera = stage.camera;
   const controls = new OrbitControls(camera, stage.canvas);
@@ -77,7 +81,7 @@ export function createInspectView(stage: Stage, pitch: Pitch, opts: InspectOptio
     ? [createAxes(stage.scene), createRuler(stage, opts.overlay, [pitchView.group, goals.group])]
     : [];
   if (opts.debug) {
-    Object.assign(window, { __footy: { stage, controls, pitch, goTo, ruler: debugAids[1] } });
+    Object.assign(window, { __footy: { stage, controls, pitch, goTo, ruler: debugAids[1], ball } });
   }
 
   return {
@@ -87,6 +91,7 @@ export function createInspectView(stage: Stage, pitch: Pitch, opts: InspectOptio
       offFrame();
       controls.dispose();
       for (const d of debugAids) d.dispose();
+      ball.dispose();
       goals.dispose();
       pitchView.dispose();
       env.dispose();
