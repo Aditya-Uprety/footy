@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M3 — Collisions, goals, outs, possession (M0–M2 done)
-- **Next task:** M3.2 `collide.ts` (player, capsule, net rect, response, kicker grace)
+- **Next task:** M3.3 goal/out/catch events, last touch, tails
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M3.1 done)
+- **Last updated:** 2026-11-05 (M3.2 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -39,7 +39,7 @@
 
 ## M3 — Collisions, goals, outs, possession · Opus 5.5 High
 - [x] M3.1 `world.ts` (hitboxes, goal frames, nets)
-- [ ] M3.2 `collide.ts` (player, capsule, net rect, response, kicker grace)
+- [x] M3.2 `collide.ts` (player, capsule, net rect, response, kicker grace)
 - [ ] M3.3 Goal/out/catch events, last touch, tails
 - [ ] M3.4 `game/possession.ts` (closest player + tie rule)
 - [ ] M3.5 Collision + event tests
