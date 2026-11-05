@@ -147,6 +147,8 @@ export interface PlayersView {
   setPlayers(list: readonly PlayerVisual[]): void;
   /** Hides one player's figure (e.g. the kicker in the aim view), or none. */
   setHidden(id: number | null): void;
+  /** Turns one player to face yaw (d̂ = (cos, 0, sin)); e.g. the kicker after a kick. */
+  setYaw(id: number, yaw: number): void;
   setHitboxesVisible(v: boolean): void;
   /** Figure + hitbox meshes for raycasting; each carries userData.playerId. */
   pickTargets(): THREE.Object3D[];
@@ -253,6 +255,10 @@ export function createPlayersView(opts: PlayersOptions = {}): PlayersView {
     setHidden(id) {
       hiddenId = id;
       for (const [pid, e] of entries) e.root.visible = pid !== id;
+    },
+    setYaw(id, yaw) {
+      const e = entries.get(id);
+      if (e) e.root.rotation.y = -yaw;
     },
     setHitboxesVisible(v) {
       hitboxesVisible = v;

@@ -227,7 +227,7 @@ export class KickPlayback {
   private readonly spinScratch: Vec3 = { x: 0, y: 0, z: 0 };
 
   /** Moves and rotates a ball view to match the last update(simDt = its return value). */
-  applyTo(ball: BallView, simDt: number): void {
+  applyTo(ball: Pick<BallView, 'setPosition' | 'roll' | 'spin'>, simDt: number): void {
     ball.setPosition(this.pos.x, this.pos.y, this.pos.z);
     if (this.catchTo || simDt <= 0) return;
     if (this.rolling) {
