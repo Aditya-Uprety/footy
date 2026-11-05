@@ -2,7 +2,7 @@
 
 Turn-based 3D football in the browser (Three.js + Vite + TypeScript). Two players draft 11 stationary players each, then take turns kicking with only Power / Curve / Loft and their own eye: no aim arrow, no trajectory preview, no landing marker. Play hot-seat on one device or online peer-to-peer with a room code.
 
-**Play it: https://aditya-uprety.github.io/footy/** · version 1.0.0
+**Play it: https://aditya-uprety.github.io/footy/** · version 1.1.0
 
 ## Features
 
