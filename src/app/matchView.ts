@@ -9,7 +9,9 @@ import type { Stage } from '../render/scene';
 import type { GameState, Phase } from '../game/types';
 import { h } from '../ui/dom';
 import { createTossScreen } from '../ui/toss';
+import { createPlayersView, type PlayersView } from '../render/players';
 import { createInspectView, type InspectView } from './inspect';
+import { createPlacementView } from './placementView';
 import type { Session } from './session';
 
 export interface MatchViewOptions {
@@ -27,6 +29,8 @@ export interface MatchView {
 }
 
 interface PhaseView {
+  /** Called with every new state while this phase lasts. */
+  sync?(s: GameState): void;
   dispose(): void;
 }
 
@@ -34,6 +38,15 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
   const { stage, session, overlay } = opts;
   const pitch = derivePitch(session.state.settings);
   const world: InspectView | null = stage ? createInspectView(stage, pitch, { debug: opts.debug, overlay }) : null;
+  // Confirmed players, for every phase after the toss.
+  const players: PlayersView | null = stage ? createPlayersView({ hitboxes: opts.debug }) : null;
+  if (stage && players) stage.scene.add(players.group);
+  let shownRev = -1;
+  function showPlayers(s: GameState): void {
+    if (!players || s.rev === shownRev) return;
+    shownRev = s.rev;
+    players.setPlayers(s.players);
+  }
 
   let phase: Phase | null = null;
   let view: PhaseView | null = null;
@@ -46,6 +59,9 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
     switch (s.phase) {
       case 'toss':
         view = tossView(s);
+        break;
+      case 'placement':
+        view = stage && world ? createPlacementView({ stage, world, session, overlay, debug: opts.debug }) : needsWebGl();
         break;
       default:
         view = stubView(s);
@@ -64,6 +80,18 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
     return toss;
   }
 
+  function needsWebGl(): PhaseView {
+    const el = h(
+      'div',
+      { class: 'panel card', 'data-screen': 'no-webgl' },
+      h('h1', {}, 'Draft'),
+      h('p', {}, 'Placing players needs WebGL, which this browser has turned off.'),
+      h('div', { class: 'card-actions' }, h('a', { class: 'btn', href: '#/' }, '← Menu')),
+    );
+    overlay.append(el);
+    return { dispose: () => el.remove() };
+  }
+
   function stubView(s: GameState): PhaseView {
     const el = h(
       'div',
@@ -77,10 +105,13 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
   }
 
   const offState = session.onState((s) => {
+    showPlayers(s);
     if (s.phase !== phase) enter(s);
+    else view?.sync?.(s);
   });
   const offDenied = session.onDenied((d) => console.warn(`Footy: ${d.intentType} refused: ${d.reason}`));
   if (world) world.controls.autoRotateSpeed = 0.35;
+  showPlayers(session.state);
   enter(session.state);
 
   return {
@@ -91,6 +122,7 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
       offState();
       offDenied();
       view?.dispose();
+      players?.dispose();
       world?.dispose();
     },
   };

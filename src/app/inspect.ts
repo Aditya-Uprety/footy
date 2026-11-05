@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as THREE from 'three';
 import { createBallView, type BallView } from '../render/ball';
 import { PHYS } from '../sim/constants';
-import { createCameraTween, INSPECT_KEYS, inspectPose, type InspectPreset } from '../render/cameras';
+import { createCameraTween, INSPECT_KEYS, inspectPose, type CameraPose, type InspectPreset } from '../render/cameras';
 import { createAxes, createRuler } from '../render/debug';
 import { createGoalsView } from '../render/goals';
 import { createPitchView } from '../render/pitch';
@@ -13,6 +13,7 @@ import { createEnvironment, type Stage } from '../render/scene';
 import type { Pitch } from '../shared/pitch';
 
 export interface InspectView {
+  readonly pitch: Pitch;
   readonly controls: OrbitControls;
   /** The ball (on the center spot until a mode moves it). */
   readonly ball: BallView;
@@ -20,6 +21,8 @@ export interface InspectView {
   readonly pickRoots: THREE.Object3D[];
   /** Moves the camera to a preset (eased unless `instant`). */
   goTo(preset: InspectPreset, instant?: boolean): void;
+  /** Moves the camera to any pose (eased over `seconds`, or at once when 0). */
+  moveTo(pose: CameraPose, seconds?: number): void;
   /**
    * Hands the camera to someone else (e.g. a playback camera): orbit controls,
    * the preset tween and keys 1–4 pause while suspended.
@@ -70,16 +73,19 @@ export function createInspectView(stage: Stage, pitch: Pitch, opts: InspectOptio
     return width / height;
   };
 
-  function goTo(preset: InspectPreset, instant = false): void {
-    const pose = inspectPose(preset, pitch, aspect(), fov());
-    if (instant) {
+  function moveTo(pose: CameraPose, seconds = 0.8): void {
+    if (seconds <= 0) {
       tween.cancel();
       camera.position.copy(pose.position);
       controls.target.copy(pose.target);
       controls.update();
     } else {
-      tween.go(pose, 0.8);
+      tween.go(pose, seconds);
     }
+  }
+
+  function goTo(preset: InspectPreset, instant = false): void {
+    moveTo(inspectPose(preset, pitch, aspect(), fov()), instant ? 0 : 0.8);
   }
   goTo('tv', true);
 
@@ -104,10 +110,12 @@ export function createInspectView(stage: Stage, pitch: Pitch, opts: InspectOptio
   }
 
   return {
+    pitch,
     controls,
     ball,
     pickRoots: [pitchView.group, goals.group],
     goTo,
+    moveTo,
     suspend() {
       suspended = true;
       tween.cancel();

@@ -13,7 +13,12 @@
 //   wheel:x,y,dy              mouse wheel (dy > 0 scrolls down / zooms out)
 //   click:x,y                 left click
 //   sclick:x,y                Shift + left click
-//   key:<Key>                 key press (e.g. key:4, key:Tab)
+//   rclick:x,y                right click
+//   move:x,y                  move the mouse (hover)
+//   key:<Key>                 key press (e.g. key:4, key:Tab, key:Enter)
+//   js<step>:<expr>           any mouse step with coordinates from a JS expression
+//                             returning [x, y] / [x1, y1, x2, y2] or {x, y}
+//                             (e.g. jsclick:__placement.screenOf(-20, 5))
 //   shot:<file.png>           extra screenshot mid-sequence
 // Env: CHROME (binary), SIZE (default 1280x720).
 // Exit code 1 if the page logged an error or threw.
@@ -133,7 +138,15 @@ async function main() {
     console.log(`[shot] ${file}`);
   };
 
-  for (const step of steps) {
+  for (const raw of steps) {
+    let step = raw;
+    if (/^js(click|sclick|rclick|move|drag|rdrag):/.test(step)) {
+      const j = step.indexOf(':');
+      const r = await send('Runtime.evaluate', { expression: step.slice(j + 1), returnByValue: true });
+      const v = r.result.value;
+      const arr = Array.isArray(v) ? v : v && typeof v === 'object' ? [v.x, v.y] : [];
+      step = `${step.slice(2, j)}:${arr.map((n) => Math.round(n)).join(',')}`;
+    }
     const i = step.indexOf(':');
     const kind = step.slice(0, i);
     const arg = step.slice(i + 1);
@@ -153,6 +166,14 @@ async function main() {
       await mouse('mouseMoved', x, y, { modifiers });
       await mouse('mousePressed', x, y, { button: 'left', buttons: 1, clickCount: 1, modifiers });
       await mouse('mouseReleased', x, y, { button: 'left', buttons: 1, clickCount: 1, modifiers });
+    } else if (kind === 'rclick') {
+      const [x, y] = nums();
+      await mouse('mouseMoved', x, y);
+      await mouse('mousePressed', x, y, { button: 'right', buttons: 2, clickCount: 1 });
+      await mouse('mouseReleased', x, y, { button: 'right', buttons: 2, clickCount: 1 });
+    } else if (kind === 'move') {
+      const [x, y] = nums();
+      await mouse('mouseMoved', x, y);
     } else if (kind === 'key') {
       const code = /^[0-9]$/.test(arg) ? `Digit${arg}` : /^[a-z]$/i.test(arg) ? `Key${arg.toUpperCase()}` : arg;
       const text = arg.length === 1 ? arg : undefined;

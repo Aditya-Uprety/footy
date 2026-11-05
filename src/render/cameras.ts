@@ -47,6 +47,29 @@ export function inspectPose(preset: InspectPreset, pitch: Pitch, aspect: number,
   }
 }
 
+/** Placement overview tilt: angle between the view direction and straight down, degrees. */
+export const PLACEMENT_POLAR_DEG = 36;
+
+/**
+ * Placement camera (§6.1): the whole pitch from above the near (+z)
+ * touchline, tilted by `polarDeg` (0 = straight down), +x to the right (Team A
+ * attacks left → right). `inset` is the fraction of the screen width covered
+ * on the right (the side panel): the pitch is fitted into the rest.
+ */
+export function placementPose(pitch: Pitch, aspect: number, fovDeg: number, opts: { polarDeg?: number; inset?: number } = {}): CameraPose {
+  const inset = THREE.MathUtils.clamp(opts.inset ?? 0, 0, 0.6);
+  const free = Math.max(0.2, aspect * (1 - inset));
+  const top = inspectPose('top', pitch, free, fovDeg);
+  const p = THREE.MathUtils.degToRad(opts.polarDeg ?? PLACEMENT_POLAR_DEG);
+  // A tilted view widens the near touchline on screen: back off a little more.
+  const dist = top.position.y * (1 + 0.45 * Math.sin(p));
+  // Move the target right by half the covered width (measured at the target), so the pitch sits left of the panel.
+  const halfW = dist * Math.tan(THREE.MathUtils.degToRad(fovDeg) / 2) * aspect;
+  const tx = inset * halfW;
+  const target = new THREE.Vector3(tx, 0, p > 0 ? 2 : 0);
+  return { position: new THREE.Vector3(tx, dist * Math.cos(p), dist * Math.sin(p) + (p > 0 ? 0 : 1e-3) + target.z), target };
+}
+
 /** Something with a movable target, e.g. OrbitControls. */
 export interface Targetable {
   target: THREE.Vector3;
