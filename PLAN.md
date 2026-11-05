@@ -166,6 +166,7 @@ footy/
 ├─ .claude/launch.json             # dev server "footy-dev" for the browser pane (M0)
 ├─ .github/workflows/deploy.yml    # GitHub Pages (M11)
 ├─ public/                         # static assets (sfx in M14)
+├─ scripts/webgl-shot.mjs          # dev: headless Chrome (SwiftShader) screenshots + console check via CDP
 └─ src/
    ├─ main.ts                      # boot → router
    ├─ architecture.test.ts         # purity rule (§3.2)
@@ -520,7 +521,7 @@ Host → Guest:
 - **Unit tests** (Vitest, Node): sim, draft, possession, restarts, rules, HostCore, protocol, serialization.
 - **Integration**: a scripted full match through HostCore (M6), then through LoopbackTransport with host and guest sessions (M10).
 - **Architecture test**: the pure layers import no `three`/`peerjs` and use no `window`/`document`.
-- **Browser checks**: start the dev server through `.claude/launch.json` ("footy-dev", port 5173) and verify in the browser pane (screenshots, zero console errors) before reporting acceptance. The user then re-checks the listed items.
+- **Browser checks**: start the dev server through `.claude/launch.json` ("footy-dev", port 5173) and verify in the browser pane (screenshots, zero console errors) before reporting acceptance. The user then re-checks the listed items. If the pane has no WebGL (true on the user's machine), verify DOM/routing in the pane and anything 3D with `node scripts/webgl-shot.mjs <url> <out.png> [steps]` (headless Chrome + SwiftShader; also "footy-preview" on port 4173 for the production build).
 - Debug aids: `?debug` (hitbox wireframes, FPS and draw calls, ruler, `window.__footy` state), `?seed=N`, `?autoplace`.
 
 ## 11. Risks and mitigations
@@ -776,3 +777,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 
 ## 14. Changelog
 - 2026-11-05 — Plan created in the planning chat. Decided with the user: placement anywhere except the center circle (GK in own box, 1 m line margin); the toss winner picks a role (A = first pick + kickoff, B = last pick); real set pieces (ghost-taker throw-ins and corners, goal kick to the keeper); keepers with a wider reach that catch; a loft slider 0–55°; 40 shared kicks with half-time after 20, draws allowed; 20 s shot timer that auto-kicks; 105×68 m, X = 8 m, Y = 4 m; ties go to the non-kicking team; no offside or fouls; view aids: zoom, adjustable camera height, hold-Tab map, minimap; desktop first, touch later. Physics constants sanity-checked with a throwaway simulation (§5.10).
+- 2026-11-05 — M0: the browser pane on the user's machine has no WebGL, so 3D checks use `scripts/webgl-shot.mjs` (headless Chrome + SwiftShader over CDP) alongside the pane (§4, §10). `Settings` + `DEFAULT_SETTINGS` were added early in `game/settings.ts` so no layer hardcodes 105/68 before M6.1; `base: './'` set already in M0 (M11.1 only needs to verify it). TypeScript 7.0.2 works; no fallback needed.

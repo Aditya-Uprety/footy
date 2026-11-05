@@ -5,11 +5,11 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M0 — Scaffold and tooling
-- **Next task:** M0.A Acceptance checks
+- **Current milestone:** M1 — Pitch and goals (M0 done)
+- **Next task:** M1.1 Striped grass + apron, receives shadows
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05
-- **Notes / blockers:** none
+- **Last updated:** 2026-11-05 (M0 complete)
+- **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
 - [x] M0.1 npm project: Vite + TS strict + three + vitest, pinned versions, scripts, .gitignore
@@ -18,7 +18,7 @@
 - [x] M0.4 Hash router with placeholder screens + query flags
 - [x] M0.5 Tests: pitch dimensions + architecture purity
 - [x] M0.6 `.claude/launch.json` + README stub
-- [ ] M0.A Acceptance checks passed (browser pane) and reported to the user
+- [x] M0.A Acceptance checks passed (browser pane) and reported to the user
 
 ## M1 — Pitch and goals · Opus 5.5 High
 - [ ] M1.1 Striped grass + apron, receives shadows
@@ -151,3 +151,4 @@
 ## Notes
 <!-- Short dated notes: deviations from PLAN.md, known issues, where a half-finished task stopped. -->
 - 2026-11-05 — **The browser pane has no WebGL on this machine** (GPU disabled in its sandbox; `getContext('webgl2')` returns null). DOM-only checks (routes, overlays, console) still use the pane; 3D views are verified with `node scripts/webgl-shot.mjs <url> <out.png> [steps]` (headless Chrome + SwiftShader over CDP: screenshots, console errors, `eval:`, `drag:`, `wheel:`, `key:`, `click:`). The dev server must be running (footy-dev).
+- 2026-11-05 — M0 notes: `src/main.ts` holds a temporary "inspect view" (temp ground + OrbitControls + lights) shared by all routes; M1 replaces the ground and adds the inspect cameras. Placeholder screens live in `ui/placeholders.ts`. `game/settings.ts` already exports `Settings`/`DEFAULT_SETTINGS` (M6.1 adds ranges/validation). Pitch tests were written in M0.2; M0.5 added `architecture.test.ts` and `app/router.test.ts`. `.claude/launch.json` also has "footy-preview" (port 4173).
