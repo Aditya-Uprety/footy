@@ -143,7 +143,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
     score: h('div', { class: 'ph-score' }),
     seed: h('span', { class: 'ph-seed' }),
   };
-  const newLayoutBtn = h('button', { type: 'button' }, 'New layout');
+  const newLayoutBtn = h('button', { type: 'button', class: 'btn btn-sm' }, 'New layout');
   newLayoutBtn.addEventListener('click', () => {
     newLayout();
     newLayoutBtn.blur();

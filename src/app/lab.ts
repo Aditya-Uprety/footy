@@ -470,7 +470,7 @@ export function createLabView(stage: Stage, pitch: Pitch, opts: LabOptions): Lab
     teamSel.value = String(state.team);
   }
 
-  const btn = (label: string, onclick: () => void, cls = '') => h('button', { type: 'button', class: cls, onclick: () => onclick() }, label);
+  const btn = (label: string, onclick: () => void, cls = '') => h('button', { type: 'button', class: `btn btn-sm${cls === 'primary' ? ' btn-primary' : ''}`, onclick: () => onclick() }, label);
 
   const ui = {
     hint: h('p', { class: 'lab-hint' }, TOOL_HINT[state.tool]),
