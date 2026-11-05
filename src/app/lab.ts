@@ -177,6 +177,7 @@ export function createLabView(stage: Stage, pitch: Pitch, opts: LabOptions): Lab
       state.dummies.map((d) => ({ ...d, shirt: d.id, yaw: d.id === kickerId ? state.yawDeg * DEG : undefined })),
     );
     players.setHitboxesVisible(state.hitboxes);
+    players.setPossessor(kickerId);
   }
 
   /** Not playing: put the ball at the next kick's start and point the aim arrow. */
@@ -222,8 +223,14 @@ export function createLabView(stage: Stage, pitch: Pitch, opts: LabOptions): Lab
 
   function play(res: KickResult): void {
     ball.resetRotation();
+    players.relax();
+    players.setPossessor(null);
+    if (state.origin.kind === 'player') players.playKick(state.origin.id);
     pb = new KickPlayback(res, {
-      onEvent: (ev) => markEvent(res, ev),
+      onEvent: (ev) => {
+        if (ev.kind === 'catch') players.playCatch(ev.keeperId, ev);
+        markEvent(res, ev);
+      },
       onEnd: () => {
         endHold = END_HOLD;
       },

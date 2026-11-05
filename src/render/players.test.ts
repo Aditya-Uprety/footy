@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { HITBOX, type HitboxShape } from '../sim/constants';
-import { buildFigureGeometry, buildHitboxGeometry, lookFor, swayPose, type Look } from './players';
+import { buildFigureGeometry, buildFigureParts, buildHitboxGeometry, disposeFigureParts, lookFor, swayPose, type Look } from './players';
 
 /** How far a point sticks out of the hitbox (≤ 0 = inside). */
 function outside(shape: HitboxShape, x: number, y: number, z: number): number {
@@ -99,6 +99,25 @@ describe('humanoid figures', () => {
     expect(maxLean).toBeLessThan(0.03); // under ~1.7°
     expect(maxLean).toBeGreaterThan(0.005); // but it does move
     expect(swayPose(2, 0).lean).not.toBeCloseTo(swayPose(2, 2.4).lean, 3);
+  });
+
+  it('figure parts (body, leg, arm) are built around their joints and add up to the merged figure', () => {
+    for (const gk of [false, true]) {
+      const parts = buildFigureParts(gk, 0xd8352f, lookFor(4));
+      const merged = buildFigureGeometry(gk, 0xd8352f, lookFor(4));
+      const verts = (g: THREE.BufferGeometry): number => g.getAttribute('position').count;
+      expect(verts(merged)).toBe(verts(parts.body) + 2 * verts(parts.leg) + 2 * verts(parts.arm));
+      // The leg hangs from the hip, the arm from the shoulder (both start at their joint and go down).
+      parts.leg.computeBoundingBox();
+      parts.arm.computeBoundingBox();
+      expect(parts.leg.boundingBox!.max.y).toBeGreaterThan(0);
+      expect(parts.leg.boundingBox!.max.y).toBeLessThan(0.1);
+      expect(parts.leg.boundingBox!.min.y).toBeCloseTo(-parts.hip.y, 2);
+      expect(parts.arm.boundingBox!.max.y).toBeLessThan(0.12);
+      expect(parts.arm.boundingBox!.min.y).toBeLessThan(-0.45);
+      expect(parts.hip.z).toBeGreaterThan(0.05);
+      disposeFigureParts(parts);
+    }
   });
 
   it('hitbox wireframes match the physics shapes', () => {

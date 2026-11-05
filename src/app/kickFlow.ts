@@ -90,6 +90,12 @@ export interface FlowPanel {
 export interface FlowPlayers {
   setHidden(id: number | null): void;
   setYaw(id: number, yaw: number): void;
+  /** Animation and ring hooks (M12.2); all optional so simple stand-ins still fit. */
+  setPossessor?(id: number | null): void;
+  playWindup?(id: number): void;
+  playKick?(id: number): void;
+  playCatch?(id: number, ball: { x: number; y: number; z: number }): void;
+  relax?(): void;
 }
 
 export interface KickFlowOptions {
@@ -234,10 +240,17 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
     spectCam = null;
     followTarget = null;
     const kickerId = kickerIdOf(turn?.origin);
-    if (kickerId !== null) players.setYaw(kickerId, res.input.yaw);
+    if (kickerId !== null) {
+      players.setYaw(kickerId, res.input.yaw);
+      players.playKick?.(kickerId);
+    }
+    players.setPossessor?.(null);
     ball.resetRotation();
     pb = new KickPlayback(res, {
-      onEvent: (ev) => opts.onEvent?.(ev, res),
+      onEvent: (ev) => {
+        if (ev.kind === 'catch') players.playCatch?.(ev.keeperId, ev);
+        opts.onEvent?.(ev, res);
+      },
       autoSlowRolls: opts.autoSlowRolls ?? true,
       keeperAt: opts.keeperAt,
     });
@@ -409,6 +422,8 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       aim.setOrigin(next.origin, next.yaw);
       const kickerId = kickerIdOf(next.origin);
       if (kickerId !== null) players.setYaw(kickerId, next.yaw);
+      players.relax?.();
+      players.setPossessor?.(kickerId);
       placeBallAtStart();
       pb = null;
       pcam = null;
@@ -437,6 +452,8 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
       windupFrom = cam ? { pos: cam.position.clone(), target: lookTarget(cam, new THREE.Vector3()) } : null;
       timer = 0;
       pending = null;
+      const kickerId = kickerIdOf(turn.origin);
+      if (kickerId !== null) players.playWindup?.(kickerId);
       setPhase('windup');
       opts.requestKick(input, turn);
       return true;
@@ -485,6 +502,7 @@ export function createKickFlow(opts: KickFlowOptions): KickFlow {
         window.removeEventListener('blur', onBlur);
       }
       players.setHidden(null);
+      players.setPossessor?.(null);
       aim.active = false;
       aim.inputEnabled = false;
     },

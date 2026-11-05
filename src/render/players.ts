@@ -1,14 +1,30 @@
-// Player meshes (PLAN M4.2, M12.1): low-poly humanoids built from primitives.
+// Player meshes (PLAN M4.2, M12.1, M12.2): low-poly humanoids built from primitives.
 // Each figure is one merged, vertex-coloured mesh (kit shirt and sleeves,
 // shorts, socks, boots, skin, hair, gloves) plus a shirt number on the back
 // and a number sprite above the head. Keepers are bigger, in their own kit,
 // with gloves and an arms-spread pose. Figures always stay inside their
-// physics hitbox (§5.2). Players idle with a slow sway. Under ?debug (and in
-// the Lab) the exact hitboxes are drawn as wireframes.
+// physics hitbox (§5.2). Players idle with a slow sway. The kicker plays a
+// wind-up and kick, a keeper a catch pose, and the player on the ball can wear a
+// ring on the ground (M12.2). Animating players swap their merged mesh for a
+// small rig (body + legs + arms) so the idle draw-call count stays low. Under
+// ?debug (and in the Lab) the exact hitboxes are drawn as wireframes.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { angleDiff } from '../shared/math';
 import { HITBOX, type HitboxShape } from '../sim/constants';
 import type { Team } from '../sim/types';
+import {
+  catchPose,
+  copyPose,
+  IDLE_POSE,
+  KICK_DURATION,
+  kickPose,
+  relaxPose,
+  RELAX_TIME,
+  ringPulse,
+  windupPose,
+  type Pose,
+} from './figureAnim';
 import type { Stage } from './scene';
 
 /** What the view needs to draw a player (game PlayerSpot fits). */
@@ -73,43 +89,64 @@ function painted(geo: THREE.BufferGeometry, hex: number): THREE.BufferGeometry {
   return g;
 }
 
-/**
- * One humanoid figure, standing at the origin and facing +x, as a single
- * vertex-coloured geometry (≈ 1.8 m outfield, a little bigger for keepers).
- * Exported for the "fits inside the hitbox" test.
- */
-export function buildFigureGeometry(gk: boolean, kitHex: number, look: Look = DEFAULT_LOOK): THREE.BufferGeometry {
-  const s = gk ? 1.06 : 1; // keepers are a little bigger
-  const parts: THREE.BufferGeometry[] = [];
-  const add = (g: THREE.BufferGeometry, hex: number): void => {
-    parts.push(painted(g, hex));
-  };
-  /** Vertical tube from y0 to y1 at (x, z), radii top → bottom (all scaled by s). */
-  const tube = (rTop: number, rBot: number, y0: number, y1: number, x: number, z: number, hex: number, seg = 10): void => {
-    const g = new THREE.CylinderGeometry(rTop * s, rBot * s, (y1 - y0) * s, seg);
-    g.translate(x * s, ((y0 + y1) / 2) * s, z * s);
-    add(g, hex);
-  };
+/** The animatable pieces of a figure (M12.2): the body plus one leg and one arm, each built around its joint. */
+export interface FigureParts {
+  /** Keepers are a little bigger. */
+  scale: number;
+  /** Everything that doesn't move on its own: hips, torso, neck, head, hair, ears. */
+  body: THREE.BufferGeometry;
+  /** A leg hanging from the hip (origin = hip joint); the same shape for both sides. */
+  leg: THREE.BufferGeometry;
+  /** An arm hanging from the shoulder (origin = shoulder joint); the same shape for both sides. */
+  arm: THREE.BufferGeometry;
+  /** Joint positions for the +z (right) side; the left side mirrors z. */
+  hip: { y: number; z: number };
+  shoulder: { y: number; z: number };
+  /** Resting spread of the arms about the forward axis, rad. */
+  armRest: number;
+}
 
+function mergeAndFree(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const merged = mergeGeometries(parts, false);
+  for (const p of parts) p.dispose();
+  if (!merged) throw new Error('players: could not merge figure geometry');
+  return merged;
+}
+
+/** The pieces of one humanoid figure, facing +x, standing at the origin. */
+export function buildFigureParts(gk: boolean, kitHex: number, look: Look = DEFAULT_LOOK): FigureParts {
+  const s = gk ? 1.06 : 1; // keepers are a little bigger
   const shortsHex = gk ? GK_DARK : SHORTS;
   const sockHex = gk ? GK_DARK : kitHex;
   const sleeveHex = kitHex; // keepers wear long sleeves; outfield sleeves stop at the elbow
+  const add = (list: THREE.BufferGeometry[], g: THREE.BufferGeometry, hex: number): void => {
+    list.push(painted(g, hex));
+  };
+  /** Vertical tube from y0 to y1 at (x, 0), radii top → bottom (all scaled by s). */
+  const tube = (list: THREE.BufferGeometry[], rTop: number, rBot: number, y0: number, y1: number, x: number, hex: number, seg = 10): void => {
+    const g = new THREE.CylinderGeometry(rTop * s, rBot * s, (y1 - y0) * s, seg);
+    g.translate(x * s, ((y0 + y1) / 2) * s, 0);
+    add(list, g, hex);
+  };
 
-  // Legs: boot, sock, bare knee, shorts leg.
-  for (const side of [-1, 1]) {
-    const z = side * 0.1;
-    const boot = new THREE.BoxGeometry(0.27 * s, 0.09 * s, 0.11 * s);
-    boot.translate(0.05 * s, 0.045 * s, z * s);
-    add(boot, BOOTS);
-    tube(0.052, 0.058, 0.08, 0.5, 0, z, sockHex);
-    tube(0.06, 0.056, 0.5, 0.58, 0, z, look.skin, 8);
-    tube(0.1, 0.082, 0.56, 0.92, 0, z, shortsHex, 12);
-  }
+  // Leg: boot, sock, bare knee, shorts leg — built standing, then moved so the hip is the origin.
+  const hipY = 0.86 * s;
+  const legParts: THREE.BufferGeometry[] = [];
+  const boot = new THREE.BoxGeometry(0.27 * s, 0.09 * s, 0.11 * s);
+  boot.translate(0.05 * s, 0.045 * s, 0);
+  add(legParts, boot, BOOTS);
+  tube(legParts, 0.052, 0.058, 0.08, 0.5, 0, sockHex);
+  tube(legParts, 0.06, 0.056, 0.5, 0.58, 0, look.skin, 8);
+  tube(legParts, 0.1, 0.082, 0.56, 0.92, 0, shortsHex, 12);
+  const leg = mergeAndFree(legParts);
+  leg.translate(0, -hipY, 0);
+
+  const bodyParts: THREE.BufferGeometry[] = [];
   // Hips / waistband.
   const hips = new THREE.CylinderGeometry(0.185 * s, 0.19 * s, 0.14 * s, 16);
   hips.scale(0.82, 1, 1);
   hips.translate(0, 0.86 * s, 0);
-  add(hips, shortsHex);
+  add(bodyParts, hips, shortsHex);
 
   // Torso (shirt): a capsule from the waist to the shoulders, a bit flat front-to-back.
   const torsoR = 0.18 * s;
@@ -119,62 +156,85 @@ export function buildFigureGeometry(gk: boolean, kitHex: number, look: Look = DE
   const torso = new THREE.CapsuleGeometry(torsoR, torsoLen, 4, 14);
   torso.scale(0.82, 1, 1);
   torso.translate(0, torsoY, 0);
-  add(torso, kitHex);
+  add(bodyParts, torso, kitHex);
   const shoulderY = torsoY + torsoLen / 2 + 0.02 * s;
 
   // Neck and head.
-  tube(0.05, 0.055, 1.46, 1.58, 0.01, 0, look.skin, 8);
+  tube(bodyParts, 0.05, 0.055, 1.46, 1.58, 0.01, look.skin, 8);
   const headR = 0.115 * s;
   const headY = 1.67 * s;
   const head = new THREE.SphereGeometry(headR, 16, 12);
   head.scale(1.05, 1.1, 0.95); // a touch longer than wide
   head.translate(0.01 * s, headY, 0);
-  add(head, look.skin);
+  add(bodyParts, head, look.skin);
   // Hair: a cap on the top/back of the head, tilted so the forehead shows.
   const hairR = headR * (look.style === 1 ? 1.1 : 1.04);
   const hair = new THREE.SphereGeometry(hairR, 16, 8, 0, Math.PI * 2, 0, Math.PI * (look.style === 1 ? 0.62 : 0.55));
   hair.scale(1.05, 1.1, 0.97);
   hair.rotateZ(0.42);
   hair.translate(0.01 * s, headY, 0);
-  add(hair, look.hair);
+  add(bodyParts, hair, look.hair);
   // Ears.
   for (const side of [-1, 1]) {
     const ear = new THREE.SphereGeometry(0.025 * s, 6, 5);
     ear.translate(0, headY - 0.01 * s, side * (headR * 0.93));
-    add(ear, look.skin);
+    add(bodyParts, ear, look.skin);
   }
 
-  // Arms: pivot at the shoulder, built hanging down (−y) then rotated about x.
-  // Outfield: by the sides, slightly away from the body. Keepers: spread out.
+  // Arm: hangs down (−y) from the shoulder joint. Outfield rests slightly away
+  // from the body; keepers spread (the rest spread is applied by the caller).
   const upper = gk ? 0.24 : 0.25;
   const lower = gk ? 0.2 : 0.25;
   const armR = 0.05 * s;
-  const angle = gk ? (100 * Math.PI) / 180 : (9 * Math.PI) / 180;
-  for (const side of [-1, 1]) {
-    const arm: THREE.BufferGeometry[] = [];
-    const seg = (g: THREE.BufferGeometry, hex: number): void => {
-      arm.push(painted(g, hex));
-    };
-    const up = new THREE.CylinderGeometry(armR * 1.05, armR, upper * s, 8);
-    up.translate(0, (-upper / 2) * s, 0);
-    seg(up, sleeveHex);
-    const lo = new THREE.CylinderGeometry(armR, armR * 0.85, lower * s, 8);
-    lo.translate(0, (-upper - lower / 2) * s, 0);
-    seg(lo, gk ? sleeveHex : look.skin);
-    const handR = (gk ? 0.068 : 0.048) * s;
-    const hand = new THREE.SphereGeometry(handR, 8, 6);
-    hand.translate(0, (-upper - lower - handR / s * 0.8) * s, 0);
-    seg(hand, gk ? GLOVES : look.skin);
-    const limb = mergeGeometries(arm, false)!;
-    for (const a of arm) a.dispose();
-    limb.rotateX(-side * angle);
-    limb.translate(0, shoulderY - 0.04 * s, side * (torsoR * 0.95 + armR * 0.9));
-    parts.push(limb);
-  }
+  const armParts: THREE.BufferGeometry[] = [];
+  const up = new THREE.CylinderGeometry(armR * 1.05, armR, upper * s, 8);
+  up.translate(0, (-upper / 2) * s, 0);
+  add(armParts, up, sleeveHex);
+  const lo = new THREE.CylinderGeometry(armR, armR * 0.85, lower * s, 8);
+  lo.translate(0, (-upper - lower / 2) * s, 0);
+  add(armParts, lo, gk ? sleeveHex : look.skin);
+  const handR = (gk ? 0.068 : 0.048) * s;
+  const hand = new THREE.SphereGeometry(handR, 8, 6);
+  hand.translate(0, (-upper - lower - (handR / s) * 0.8) * s, 0);
+  add(armParts, hand, gk ? GLOVES : look.skin);
 
-  const merged = mergeGeometries(parts, false);
-  for (const p of parts) p.dispose();
-  if (!merged) throw new Error('players: could not merge figure geometry');
+  return {
+    scale: s,
+    body: mergeAndFree(bodyParts),
+    leg,
+    arm: mergeAndFree(armParts),
+    hip: { y: hipY, z: 0.1 * s },
+    shoulder: { y: shoulderY - 0.04 * s, z: torsoR * 0.95 + armR * 0.9 },
+    armRest: gk ? (100 * Math.PI) / 180 : (9 * Math.PI) / 180,
+  };
+}
+
+export function disposeFigureParts(p: FigureParts): void {
+  p.body.dispose();
+  p.leg.dispose();
+  p.arm.dispose();
+}
+
+/**
+ * One humanoid figure, standing at the origin and facing +x, as a single
+ * vertex-coloured geometry (≈ 1.8 m outfield, a little bigger for keepers):
+ * the animatable parts merged in their resting pose.
+ * Exported for the "fits inside the hitbox" test.
+ */
+export function buildFigureGeometry(gk: boolean, kitHex: number, look: Look = DEFAULT_LOOK): THREE.BufferGeometry {
+  const p = buildFigureParts(gk, kitHex, look);
+  const parts: THREE.BufferGeometry[] = [p.body.clone()];
+  for (const side of [-1, 1]) {
+    parts.push(p.leg.clone().translate(0, p.hip.y, side * p.hip.z));
+    parts.push(
+      p.arm
+        .clone()
+        .rotateX(-side * p.armRest)
+        .translate(0, p.shoulder.y, side * p.shoulder.z),
+    );
+  }
+  disposeFigureParts(p);
+  const merged = mergeAndFree(parts);
   merged.computeBoundingBox();
   merged.computeBoundingSphere();
   return merged;
@@ -224,6 +284,16 @@ export interface PlayersView {
   setHidden(id: number | null): void;
   /** Turns one player to face yaw (d̂ = (cos, 0, sin)); e.g. the kicker after a kick. */
   setYaw(id: number, yaw: number): void;
+  /** The player on the ball gets a ring on the ground (null = none). Hidden while that player's figure is hidden. */
+  setPossessor(id: number | null): void;
+  /** The kicker draws the leg back (follows the flow's wind-up). */
+  playWindup(id: number): void;
+  /** The kicker strikes the ball and follows through (continues a wind-up if there was one). */
+  playKick(id: number): void;
+  /** A keeper catches a ball at `ball`: turns toward it and brings the arms together, held until `relax`. */
+  playCatch(id: number, ball: { x: number; y: number; z: number }): void;
+  /** Everybody eases back to standing (a new turn begins). */
+  relax(): void;
   setHitboxesVisible(v: boolean): void;
   /** Figure + hitbox meshes for raycasting; each carries userData.playerId. */
   pickTargets(): THREE.Object3D[];
@@ -239,12 +309,47 @@ export interface PlayersOptions {
   stage?: Pick<Stage, 'onFrame'>;
 }
 
+interface Rig {
+  group: THREE.Group;
+  legs: [THREE.Group, THREE.Group];
+  arms: [THREE.Group, THREE.Group];
+}
+
+/** What a figure is doing besides standing around. */
+interface Anim {
+  kind: 'windup' | 'kick' | 'catch' | 'relax';
+  /** Seconds since it began. */
+  t: number;
+  /** The pose it began from (so one animation flows into the next). */
+  from: Pose;
+  ballY?: number;
+  /** Catch: turn toward this yaw over TURN_TIME. */
+  yawFrom?: number;
+  yawTo?: number;
+}
+
 interface Entry {
   root: THREE.Group;
+  /** Gets the idle sway (and a lean while animating); holds the figure or the rig and the back number. */
+  sway: THREE.Group;
+  /** The merged resting figure (what is drawn when nothing animates, and what raycasts hit). */
   figure: THREE.Mesh;
+  /** The jointed figure, built the first time the player animates. */
+  rig: Rig | null;
+  gk: boolean;
+  team: Team;
+  /** Key of the cached figure parts. */
+  partsKey: string;
+  look: Look;
+  anim: Anim | null;
+  /** The pose last drawn. */
+  pose: Pose;
   /** Idle-sway phase offset, rad (so the team doesn't move in lockstep). */
   phase: number;
 }
+
+/** Seconds a catching keeper takes to turn toward the ball. */
+const TURN_TIME = 0.15;
 
 /** Idle sway: a slow lean about the feet, plus a faint breathing stretch. */
 const SWAY_LEAN = 0.018; // rad, ≈ 1°
@@ -268,15 +373,26 @@ export function createPlayersView(opts: PlayersOptions = {}): PlayersView {
 
   const figureMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, metalness: 0 });
   const figureGeos = new Map<string, THREE.BufferGeometry>();
-  const figureGeo = (team: Team, gk: boolean, id: number): THREE.BufferGeometry => {
-    const look = lookFor(id);
-    const key = `${team}:${gk ? 'gk' : 'of'}:${look.skin}:${look.hair}:${look.style}`;
+  const partsCache = new Map<string, FigureParts>();
+  const keyFor = (team: Team, gk: boolean, look: Look): string =>
+    `${team}:${gk ? 'gk' : 'of'}:${look.skin}:${look.hair}:${look.style}`;
+  const kitFor = (team: Team, gk: boolean): number => (gk ? KIT_COLORS[team].gk : KIT_COLORS[team].outfield);
+  const figureGeo = (team: Team, gk: boolean, look: Look): THREE.BufferGeometry => {
+    const key = keyFor(team, gk, look);
     let g = figureGeos.get(key);
     if (!g) {
-      g = buildFigureGeometry(gk, gk ? KIT_COLORS[team].gk : KIT_COLORS[team].outfield, look);
+      g = buildFigureGeometry(gk, kitFor(team, gk), look);
       figureGeos.set(key, g);
     }
     return g;
+  };
+  const partsOf = (e: Entry): FigureParts => {
+    let p = partsCache.get(e.partsKey);
+    if (!p) {
+      p = buildFigureParts(e.gk, kitFor(e.team, e.gk), e.look);
+      partsCache.set(e.partsKey, p);
+    }
+    return p;
   };
 
   const hitGeos = { of: buildHitboxGeometry(HITBOX.OUTFIELD), gk: buildHitboxGeometry(HITBOX.GK) };
@@ -307,19 +423,145 @@ export function createPlayersView(opts: PlayersOptions = {}): PlayersView {
     return m;
   };
 
+  // Possessor ring: one flat ring that moves to the player on the ball.
+  const ringGeos = {
+    of: new THREE.RingGeometry(0.62, 0.78, 40).rotateX(-Math.PI / 2),
+    gk: new THREE.RingGeometry(1.0, 1.2, 40).rotateX(-Math.PI / 2),
+  };
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xffd23a,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const ring = new THREE.Mesh(ringGeos.of, ringMat);
+  ring.name = 'possessor-ring';
+  ring.position.y = 0.03;
+  ring.visible = false;
+  ring.renderOrder = 2;
+  group.add(ring);
+  let possessorId: number | null = null;
+
   let hitboxesVisible = !!opts.hitboxes;
   let hiddenId: number | null = null;
   const entries = new Map<number, Entry>();
   const hitboxes: THREE.LineSegments[] = [];
 
+  function syncRing(): void {
+    const e = possessorId === null ? undefined : entries.get(possessorId);
+    if (!e || !e.root.visible) {
+      ring.visible = false;
+      return;
+    }
+    ring.geometry = e.gk ? ringGeos.gk : ringGeos.of;
+    ring.position.set(e.root.position.x, 0.03, e.root.position.z);
+    ring.visible = true;
+  }
+
+  // ---- rig (animation) -------------------------------------------------------
+  function buildRig(e: Entry): Rig {
+    const parts = partsOf(e);
+    const g = new THREE.Group();
+    g.name = 'player-rig';
+    const mesh = (geo: THREE.BufferGeometry): THREE.Mesh => {
+      const m = new THREE.Mesh(geo, figureMat);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      return m;
+    };
+    g.add(mesh(parts.body));
+    const legs: THREE.Group[] = [];
+    const arms: THREE.Group[] = [];
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Group();
+      leg.position.set(0, parts.hip.y, side * parts.hip.z);
+      leg.add(mesh(parts.leg));
+      g.add(leg);
+      legs.push(leg);
+      const arm = new THREE.Group();
+      arm.position.set(0, parts.shoulder.y, side * parts.shoulder.z);
+      arm.add(mesh(parts.arm));
+      g.add(arm);
+      arms.push(arm);
+    }
+    g.visible = false;
+    e.sway.add(g);
+    return { group: g, legs: legs as [THREE.Group, THREE.Group], arms: arms as [THREE.Group, THREE.Group] };
+  }
+
+  /** Draws a pose on the rig (switching from the merged figure the first time). */
+  function applyPose(e: Entry, pose: Pose): void {
+    e.rig ??= buildRig(e);
+    const rig = e.rig;
+    const rest = partsOf(e).armRest;
+    rig.legs[0].rotation.z = pose.legL;
+    rig.legs[1].rotation.z = pose.legR;
+    // Arm: swing in the fore-aft plane first (z), then spread about the forward axis (x).
+    rig.arms[0].rotation.set(rest + pose.armLAbd, 0, pose.armL); // side −1: x = −side·(rest + abd)
+    rig.arms[1].rotation.set(-(rest + pose.armRAbd), 0, pose.armR);
+    rig.group.visible = true;
+    e.figure.visible = false;
+    e.pose = pose;
+  }
+
+  /** Back to the merged resting figure. */
+  function toStatic(e: Entry): void {
+    if (e.rig) e.rig.group.visible = false;
+    e.figure.visible = true;
+    e.pose = copyPose(IDLE_POSE);
+    e.anim = null;
+  }
+
+  function start(e: Entry, anim: Omit<Anim, 't' | 'from'>): void {
+    e.anim = { ...anim, t: 0, from: copyPose(e.pose) };
+  }
+
+  function stepAnim(e: Entry, dt: number): void {
+    const a = e.anim;
+    if (!a) return;
+    a.t += dt;
+    switch (a.kind) {
+      case 'windup':
+        applyPose(e, windupPose(a.t, a.from)); // holds its last pose until the strike
+        break;
+      case 'kick':
+        if (a.t >= KICK_DURATION) toStatic(e);
+        else applyPose(e, kickPose(a.t, a.from));
+        break;
+      case 'catch': {
+        applyPose(e, catchPose(a.t, a.ballY ?? 1.2, partsOf(e).armRest, a.from));
+        if (a.yawFrom !== undefined && a.yawTo !== undefined) {
+          const k = Math.min(1, a.t / TURN_TIME);
+          e.root.rotation.y = -(a.yawFrom + angleDiff(a.yawFrom, a.yawTo) * k * (2 - k)); // ease-out
+        }
+        break; // held until relax()
+      }
+      case 'relax':
+        if (a.t >= RELAX_TIME) toStatic(e);
+        else applyPose(e, relaxPose(a.t, a.from));
+        break;
+    }
+  }
+
   let clock = 0;
   const offFrame = opts.stage?.onFrame((dt) => {
     clock += dt;
     for (const e of entries.values()) {
+      stepAnim(e, dt); // animations run on even while the figure is hidden (so a hidden kicker's kick is on time)
       if (!e.root.visible) continue;
       const { lean, nod, stretch } = swayPose(clock, e.phase);
-      e.figure.rotation.set(lean, 0, nod); // about the feet (the figure's origin)
-      e.figure.scale.y = stretch;
+      // Rotation about the feet (the sway group's origin); an animation leans the whole body forward (−z).
+      e.sway.rotation.set(lean, 0, nod - e.pose.lean);
+      e.sway.scale.y = stretch;
+    }
+    if (ring.visible) {
+      const { scale, opacity } = ringPulse(clock);
+      ring.scale.set(scale, 1, scale);
+      ringMat.opacity = opacity;
     }
   });
 
@@ -327,6 +569,7 @@ export function createPlayersView(opts: PlayersOptions = {}): PlayersView {
     for (const e of entries.values()) e.root.removeFromParent();
     entries.clear();
     hitboxes.length = 0;
+    ring.visible = false;
   }
 
   return {
@@ -342,19 +585,24 @@ export function createPlayersView(opts: PlayersOptions = {}): PlayersView {
         root.rotation.y = -yaw;
         root.userData.playerId = p.id;
 
-        const figure = new THREE.Mesh(figureGeo(p.team, p.gk, p.id), figureMat);
+        const sway = new THREE.Group();
+        sway.name = 'player-sway';
+        root.add(sway);
+
+        const look = lookFor(p.id);
+        const figure = new THREE.Mesh(figureGeo(p.team, p.gk, look), figureMat);
         figure.name = 'player-figure';
         figure.castShadow = true;
         figure.receiveShadow = true;
         figure.userData.playerId = p.id;
-        root.add(figure);
+        sway.add(figure);
 
         const sc = p.gk ? 1.06 : 1;
         const back = new THREE.Mesh(backGeo, backMat(p.shirt ?? p.id));
         back.name = 'player-back-number';
         back.position.set(-0.18 * 0.82 * sc - 0.012, 1.2 * sc, 0);
         back.scale.setScalar(sc);
-        figure.add(back);
+        sway.add(back);
 
         const shape = p.gk ? HITBOX.GK : HITBOX.OUTFIELD;
         const sprite = new THREE.Sprite(numberMat(p.shirt ?? p.id));
@@ -372,16 +620,58 @@ export function createPlayersView(opts: PlayersOptions = {}): PlayersView {
 
         root.visible = p.id !== hiddenId;
         group.add(root);
-        entries.set(p.id, { root, figure, phase: (p.id * 2.399) % (Math.PI * 2) });
+        entries.set(p.id, {
+          root,
+          sway,
+          figure,
+          rig: null,
+          gk: p.gk,
+          team: p.team,
+          partsKey: keyFor(p.team, p.gk, look),
+          look,
+          anim: null,
+          pose: copyPose(IDLE_POSE),
+          phase: (p.id * 2.399) % (Math.PI * 2),
+        });
       }
+      syncRing();
     },
     setHidden(id) {
       hiddenId = id;
       for (const [pid, e] of entries) e.root.visible = pid !== id;
+      syncRing();
     },
     setYaw(id, yaw) {
       const e = entries.get(id);
       if (e) e.root.rotation.y = -yaw;
+    },
+    setPossessor(id) {
+      possessorId = id;
+      syncRing();
+    },
+    playWindup(id) {
+      const e = entries.get(id);
+      if (e) start(e, { kind: 'windup' });
+    },
+    playKick(id) {
+      const e = entries.get(id);
+      if (e) start(e, { kind: 'kick' });
+    },
+    playCatch(id, ball) {
+      const e = entries.get(id);
+      if (!e) return;
+      const yawFrom = -e.root.rotation.y;
+      const dx = ball.x - e.root.position.x;
+      const dz = ball.z - e.root.position.z;
+      const turn = dx * dx + dz * dz > 1e-6;
+      start(e, { kind: 'catch', ballY: ball.y, yawFrom: turn ? yawFrom : undefined, yawTo: turn ? Math.atan2(dz, dx) : undefined });
+    },
+    relax() {
+      for (const e of entries.values()) {
+        if (!e.anim && !e.rig?.group.visible) continue;
+        if (e.anim?.kind === 'relax') continue;
+        start(e, { kind: 'relax' });
+      }
     },
     setHitboxesVisible(v) {
       hitboxesVisible = v;
@@ -406,7 +696,11 @@ export function createPlayersView(opts: PlayersOptions = {}): PlayersView {
         m.dispose();
       }
       for (const g of figureGeos.values()) g.dispose();
+      for (const p of partsCache.values()) disposeFigureParts(p);
       figureMat.dispose();
+      ringGeos.of.dispose();
+      ringGeos.gk.dispose();
+      ringMat.dispose();
       hitGeos.of.dispose();
       hitGeos.gk.dispose();
       hitMats.of.dispose();
