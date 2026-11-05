@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M9 — Networking and lobby (M0–M8 done)
-- **Next task:** M9.5 Protocol + handshake tests
+- **Next task:** M9.A Acceptance checks (two windows)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M9.4 done)
+- **Last updated:** 2026-11-05 (M9.5 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -91,7 +91,7 @@
 - [x] M9.2 `net/peer.ts` (PeerJS, room codes, ICE, errors)
 - [x] M9.3 Lobby UI (host / join / link / status + RTT)
 - [x] M9.4 Handshake, heartbeat, disconnect overlay
-- [ ] M9.5 Protocol + handshake tests
+- [x] M9.5 Protocol + handshake tests
 - [ ] M9.A Acceptance checks passed (two windows) and reported to the user
 
 ## M10 — Online match · Opus 5.5 High
