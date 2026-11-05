@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M10 — Online match (M0–M9 done)
-- **Next task:** M10.1 `net/hostSession.ts` (snapshots, kick results)
+- **Next task:** M10.2 `net/guestSession.ts` (intents on own turn only) — session class written in M10.1; left: online.ts match wiring + views gating controls
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M9 complete)
+- **Last updated:** 2026-11-05 (M10.1 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -95,7 +95,7 @@
 - [x] M9.A Acceptance checks passed (two windows) and reported to the user
 
 ## M10 — Online match · Opus 5.5 High
-- [ ] M10.1 `net/hostSession.ts` (snapshots, kick results)
+- [x] M10.1 `net/hostSession.ts` (snapshots, kick results)
 - [ ] M10.2 `net/guestSession.ts` (intents on own turn only)
 - [ ] M10.3 Aim-yaw streaming + spectator camera
 - [ ] M10.4 Shot timer + host guard + placement timer

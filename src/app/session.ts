@@ -18,6 +18,13 @@ export interface Denial {
 
 export type SessionKick = Pick<KickEvent, 'result' | 'next' | 'seat' | 'auto'>;
 
+/** A streamed aim yaw of the seat that is aiming (§8.2 `aim`, ≤ 10 Hz). */
+export interface SessionAim {
+  seat: Seat;
+  turnId: number;
+  yaw: number;
+}
+
 export interface Session {
   readonly kind: 'local' | 'host' | 'guest';
   /** The latest authoritative state (after a kick this is already `next`; views hold it until playback ends). */
@@ -31,6 +38,10 @@ export interface Session {
   onState(cb: (s: GameState) => void): () => void;
   onKick(cb: (k: SessionKick) => void): () => void;
   onDenied(cb: (d: Denial) => void): () => void;
+  /** Streams a local kicker's yaw (online: to the opponent's spectator camera and the host guard). */
+  aim(seat: Seat, turnId: number, yaw: number): void;
+  /** The remote seat's streamed aim (never fires in hot-seat). */
+  onAim(cb: (a: SessionAim) => void): () => void;
   dispose(): void;
 }
 
@@ -86,6 +97,14 @@ export class LocalSession implements Session {
   onDenied(cb: (d: Denial) => void): () => void {
     this.deniedCbs.add(cb);
     return () => this.deniedCbs.delete(cb);
+  }
+
+  aim(seat: Seat, _turnId: number, yaw: number): void {
+    this.core.noteAim(seat, yaw);
+  }
+
+  onAim(): () => void {
+    return () => {};
   }
 
   dispose(): void {
