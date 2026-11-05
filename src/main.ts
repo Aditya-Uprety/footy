@@ -1,13 +1,10 @@
 // Boot: DOM layers → 3D stage (if WebGL is available) → router.
 import './ui/styles.css';
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { createInspectView } from './app/inspect';
 import { getFlags, startRouter, type Route } from './app/router';
 import { DEFAULT_SETTINGS } from './game/settings';
 import { createFpsCounter } from './render/debug';
-import { createGoalsView } from './render/goals';
-import { createPitchView } from './render/pitch';
-import { createEnvironment, createStage, type Stage } from './render/scene';
+import { createStage, type Stage } from './render/scene';
 import { derivePitch } from './shared/pitch';
 import { clear, h } from './ui/dom';
 import { placeholderScreen } from './ui/placeholders';
@@ -38,29 +35,9 @@ function tryCreateStage(): Stage | null {
   }
 }
 
-/** M0 inspect view: temporary ground with an orbit camera. Replaced per mode later. */
-function setupInspectView(stage: Stage): void {
-  const pitch = derivePitch(DEFAULT_SETTINGS);
-  createEnvironment(stage.scene, pitch);
-  stage.scene.add(createPitchView(pitch, stage.renderer.capabilities.getMaxAnisotropy()).group);
-  stage.scene.add(createGoalsView(pitch).group);
-
-  const camera = stage.camera as THREE.PerspectiveCamera;
-  camera.position.set(0, pitch.halfLength * 0.9, pitch.halfWidth * 2.1);
-  const controls = new OrbitControls(camera, stage.canvas);
-  controls.target.set(0, 0, 0);
-  controls.enableDamping = true;
-  controls.maxPolarAngle = Math.PI / 2 - 0.02;
-  controls.minDistance = 3;
-  controls.maxDistance = pitch.length * 1.5;
-  controls.update();
-  stage.onFrame(() => controls.update());
-  if (flags.debug) Object.assign(window, { __footy: { stage, controls, pitch } });
-}
-
 const stage = tryCreateStage();
 if (stage) {
-  setupInspectView(stage);
+  createInspectView(stage, derivePitch(DEFAULT_SETTINGS), { debug: flags.debug, overlay: uiEl });
   if (flags.debug) createFpsCounter(stage, uiEl);
 }
 

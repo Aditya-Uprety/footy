@@ -12,6 +12,7 @@
 //   rdrag:x1,y1,x2,y2         right-drag with the mouse
 //   wheel:x,y,dy              mouse wheel (dy > 0 scrolls down / zooms out)
 //   click:x,y                 left click
+//   sclick:x,y                Shift + left click
 //   key:<Key>                 key press (e.g. key:4, key:Tab)
 //   shot:<file.png>           extra screenshot mid-sequence
 // Env: CHROME (binary), SIZE (default 1280x720).
@@ -146,11 +147,12 @@ async function main() {
     else if (kind === 'wheel') {
       const [x, y, dy] = nums();
       await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x, y, deltaX: 0, deltaY: dy });
-    } else if (kind === 'click') {
+    } else if (kind === 'click' || kind === 'sclick') {
       const [x, y] = nums();
-      await mouse('mouseMoved', x, y);
-      await mouse('mousePressed', x, y, { button: 'left', buttons: 1, clickCount: 1 });
-      await mouse('mouseReleased', x, y, { button: 'left', buttons: 1, clickCount: 1 });
+      const modifiers = kind === 'sclick' ? 8 : 0;
+      await mouse('mouseMoved', x, y, { modifiers });
+      await mouse('mousePressed', x, y, { button: 'left', buttons: 1, clickCount: 1, modifiers });
+      await mouse('mouseReleased', x, y, { button: 'left', buttons: 1, clickCount: 1, modifiers });
     } else if (kind === 'key') {
       const code = /^[0-9]$/.test(arg) ? `Digit${arg}` : /^[a-z]$/i.test(arg) ? `Key${arg.toUpperCase()}` : arg;
       const text = arg.length === 1 ? arg : undefined;
