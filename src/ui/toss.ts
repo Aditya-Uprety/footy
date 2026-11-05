@@ -2,6 +2,7 @@
 // the winner; this screen flips a coin that lands on the winner's face, then
 // the winner picks a role card. Click the coin (or press a key) to skip.
 import type { Seat } from '../game/types';
+import { kitOf } from '../shared/kits';
 import { h } from './dom';
 
 export type Role = 'A' | 'B';
@@ -29,9 +30,21 @@ export interface TossScreen {
 export const TOSS_FLIP_MS = 1900;
 const TURNS = 5;
 
-export const ROLE_TEXT: Readonly<Record<Role, { title: string; kit: string; lines: string[] }>> = {
-  A: { title: 'Team A', kit: 'Red', lines: ['Place the first player', 'Take the opening kickoff'] },
-  B: { title: 'Team B', kit: 'Blue', lines: ['Place the last player', 'Kick off the second half'] },
+export const ROLE_TEXT: Readonly<Record<Role, { title: string; readonly kit: string; lines: string[] }>> = {
+  A: {
+    title: 'Team A',
+    get kit() {
+      return kitOf(0).name;
+    },
+    lines: ['Place the first player', 'Take the opening kickoff'],
+  },
+  B: {
+    title: 'Team B',
+    get kit() {
+      return kitOf(1).name;
+    },
+    lines: ['Place the last player', 'Kick off the second half'],
+  },
 };
 
 export function createTossScreen(opts: TossOptions): TossScreen {

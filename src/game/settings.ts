@@ -1,6 +1,7 @@
 // PURE. Match settings, their defaults and ranges (PLAN §2.9).
 // Every layer reads pitch size, spacing, match length and timers from here;
 // nothing hardcodes 105/68/8/4/40/20.
+import { DEFAULT_KIT_PAIR, KIT_PAIRS } from '../shared/kits';
 
 export interface Settings {
   /** Pitch length L, metres. */
@@ -17,6 +18,8 @@ export interface Settings {
   shotTimerSec: number;
   /** Placement timer in seconds; 0 = off. */
   placementTimerSec: number;
+  /** Kit pair: index into `KIT_PAIRS` (shared/kits.ts). */
+  kitPair: number;
 }
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
@@ -27,6 +30,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   kicksPerMatch: 40,
   shotTimerSec: 20,
   placementTimerSec: 0,
+  kitPair: DEFAULT_KIT_PAIR,
 });
 
 export function defaultSettings(): Settings {
@@ -54,6 +58,7 @@ export const SETTING_RANGES: Readonly<Record<keyof Settings, SettingRange>> = Ob
   kicksPerMatch: { min: 10, max: 100, step: 2 },
   shotTimerSec: { min: 10, max: 60, step: 1, offAllowed: true },
   placementTimerSec: { min: 20, max: 120, step: 1, offAllowed: true },
+  kitPair: { min: 0, max: KIT_PAIRS.length - 1, step: 1 },
 });
 
 /** The effective range of one setting given the others (Y ≤ X − 1). */

@@ -3,9 +3,17 @@
 // Confirm, what blocks Confirm, ring legend, controls) and the hover tooltip
 // that follows the cursor with the reason a spot is red.
 import type { Team } from '../game/types';
+import { kitOf } from '../shared/kits';
 import { h } from './dom';
 
-export const KIT_NAME: Readonly<Record<Team, string>> = { 0: 'Red', 1: 'Blue' };
+export const KIT_NAME: Readonly<Record<Team, string>> = {
+  get 0() {
+    return kitOf(0).name;
+  },
+  get 1() {
+    return kitOf(1).name;
+  },
+};
 
 export interface PanelInfo {
   team: Team;

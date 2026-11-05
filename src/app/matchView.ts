@@ -16,6 +16,8 @@ import type { Stage } from '../render/scene';
 import { activeSeat, teamOfSeat } from '../game/rules';
 import type { GameState, Phase, Seat } from '../game/types';
 import { h } from '../ui/dom';
+import { applyKitTheme, resetKitTheme } from '../ui/kitTheme';
+import { createHelpOverlay } from '../ui/helpOverlay';
 import { createFullTimeScreen } from '../ui/screens';
 import { createTossScreen } from '../ui/toss';
 import { createPlayersView, type PlayersView } from '../render/players';
@@ -58,6 +60,9 @@ const AUTOPLACE_DELAY = 120;
 
 export function createMatchView(opts: MatchViewOptions): MatchView {
   const { stage, session, overlay } = opts;
+  // Both devices read the kit pair from the match settings (M13.4).
+  applyKitTheme(session.state.settings.kitPair);
+  const help = createHelpOverlay(overlay);
   const pitch = derivePitch(session.state.settings);
   const world: InspectView | null = stage ? createInspectView(stage, pitch, { debug: opts.debug, overlay }) : null;
   // Confirmed players, for every phase after the toss.
@@ -256,6 +261,8 @@ export function createMatchView(opts: MatchViewOptions): MatchView {
       view?.dispose();
       players?.dispose();
       world?.dispose();
+      help.dispose();
+      resetKitTheme();
     },
   };
 }

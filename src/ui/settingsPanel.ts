@@ -2,6 +2,7 @@
 // shared by the hot-seat setup and the online host lobby. The guest lobby shows
 // the same panel read-only, kept in sync by the host's `settings` message.
 import { DEFAULT_SETTINGS, sanitizeSettings, settingRange, type Settings } from '../game/settings';
+import { hexString, KIT_PAIRS } from '../shared/kits';
 import { h } from './dom';
 
 interface SettingMeta {
@@ -106,6 +107,11 @@ export function createSettingsPanel(o: SettingsPanelOptions): SettingsPanel {
         r.toggle.disabled = !editable;
       }
     }
+    kitButtons.forEach((b, i) => {
+      b.classList.toggle('on', i === current.kitPair);
+      b.setAttribute('aria-pressed', String(i === current.kitPair));
+      b.disabled = !editable;
+    });
     resetBtn.hidden = !editable;
     resetBtn.disabled = JSON.stringify(current) === JSON.stringify(DEFAULT_SETTINGS);
   }
@@ -116,6 +122,23 @@ export function createSettingsPanel(o: SettingsPanelOptions): SettingsPanel {
     o.onChange?.({ ...current });
   });
 
+  // Kit pair: one swatch button per pair (shown in each team's colors).
+  const kitButtons: HTMLButtonElement[] = KIT_PAIRS.map((pair, i) => {
+    const [a, b] = pair.teams;
+    const btn = h(
+      'button',
+      { type: 'button', class: 'kit-choice', 'data-kit': String(i), title: pair.label, 'aria-label': `Kits: ${pair.label}` },
+      h('span', { class: 'kit-dot', style: `background:${hexString(a.outfield)}` }),
+      h('span', { class: 'kit-dot', style: `background:${hexString(b.outfield)}` }),
+      h('span', { class: 'kit-label' }, pair.label),
+    );
+    btn.addEventListener('click', () => {
+      if (editable) commit('kitPair', i);
+    });
+    return btn;
+  });
+  const kitRow = h('div', { class: 'settings-row settings-kits', title: 'Team colors, the same on both screens.' }, h('span', { class: 'settings-label' }, 'Kits'), h('span', { class: 'kit-choices' }, ...kitButtons));
+
   const el = h(
     'details',
     { class: 'settings', 'data-settings': '' },
@@ -123,6 +146,7 @@ export function createSettingsPanel(o: SettingsPanelOptions): SettingsPanel {
     h(
       'div',
       { class: 'settings-body' },
+      kitRow,
       ...rows.map((r) =>
         h(
           'div',

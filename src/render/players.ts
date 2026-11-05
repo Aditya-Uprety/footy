@@ -10,6 +10,7 @@
 // ?debug (and in the Lab) the exact hitboxes are drawn as wireframes.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { activeKitPair, kitOf } from '../shared/kits';
 import { angleDiff } from '../shared/math';
 import { HITBOX, type HitboxShape } from '../sim/constants';
 import type { Team } from '../sim/types';
@@ -40,10 +41,14 @@ export interface PlayerVisual {
   yaw?: number;
 }
 
-/** Default kits (§2.1.3): A red, B blue; keepers yellow (A) and green (B). */
+/** The active kit pair's colors (§2.1.3; chosen in the lobby settings, shared/kits.ts). */
 export const KIT_COLORS: Readonly<Record<Team, { outfield: number; gk: number }>> = {
-  0: { outfield: 0xd8352f, gk: 0xf0cf2a },
-  1: { outfield: 0x2c63d6, gk: 0x34b35a },
+  get 0() {
+    return kitOf(0);
+  },
+  get 1() {
+    return kitOf(1);
+  },
 };
 
 /** Shorts / socks / glove colours (outfield shorts white; keepers dark with white gloves). */
@@ -375,7 +380,7 @@ export function createPlayersView(opts: PlayersOptions = {}): PlayersView {
   const figureGeos = new Map<string, THREE.BufferGeometry>();
   const partsCache = new Map<string, FigureParts>();
   const keyFor = (team: Team, gk: boolean, look: Look): string =>
-    `${team}:${gk ? 'gk' : 'of'}:${look.skin}:${look.hair}:${look.style}`;
+    `${activeKitPair()}:${team}:${gk ? 'gk' : 'of'}:${look.skin}:${look.hair}:${look.style}`;
   const kitFor = (team: Team, gk: boolean): number => (gk ? KIT_COLORS[team].gk : KIT_COLORS[team].outfield);
   const figureGeo = (team: Team, gk: boolean, look: Look): THREE.BufferGeometry => {
     const key = keyFor(team, gk, look);

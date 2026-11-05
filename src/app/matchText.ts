@@ -1,11 +1,19 @@
 // Pure text for the match HUD (PLAN §9, M8.3): possession banner, event and
 // restart toasts, kick counter, full-time result. No DOM, so it is unit-tested.
 import { seatOfTeam, winner } from '../game/rules';
+import { kitOf } from '../shared/kits';
 import type { GameState, LastKick, PlayerSpot, Possession, RestartKind, Team } from '../game/types';
 import type { SimEvent } from '../sim/types';
 
-/** Kit names used in every match text (custom team names arrive in M13.4). */
-export const TEAM_KIT: Readonly<Record<Team, string>> = Object.freeze({ 0: 'Red', 1: 'Blue' });
+/** Kit names used in every match text: they follow the match's kit pair (M13.4). */
+export const TEAM_KIT: Readonly<Record<Team, string>> = {
+  get 0() {
+    return kitOf(0).name;
+  },
+  get 1() {
+    return kitOf(1).name;
+  },
+};
 
 export type ToastKind = 'goal' | 'save' | 'out' | 'post' | 'info';
 

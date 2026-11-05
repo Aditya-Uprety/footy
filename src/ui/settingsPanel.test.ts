@@ -3,8 +3,9 @@ import { DEFAULT_SETTINGS, sanitizeSettings, validateSettings } from '../game/se
 import { changeSetting, formatSetting, settingsSummary, SETTING_META } from './settingsPanel';
 
 describe('settings panel model', () => {
-  it('covers every setting once', () => {
-    expect(SETTING_META.map((m) => m.key).sort()).toEqual(Object.keys(DEFAULT_SETTINGS).sort());
+  it('covers every setting once (the kit pair has its own swatch chooser)', () => {
+    const sliders = Object.keys(DEFAULT_SETTINGS).filter((k) => k !== 'kitPair');
+    expect(SETTING_META.map((m) => m.key).sort()).toEqual(sliders.sort());
   });
 
   it('changeSetting snaps into range and keeps Y ≤ X − 1', () => {

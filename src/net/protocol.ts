@@ -161,7 +161,9 @@ function isSettings(x: unknown): x is Settings {
     isNum(x.minOpponentDist) &&
     isInt(x.kicksPerMatch) &&
     isNum(x.shotTimerSec) &&
-    isNum(x.placementTimerSec)
+    isNum(x.placementTimerSec) &&
+    // kitPair is additive: an older host's settings have none (the default kit applies).
+    (x.kitPair === undefined || isInt(x.kitPair))
   );
 }
 

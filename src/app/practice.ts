@@ -5,6 +5,7 @@
 //
 // Pieces: aim rig (M5.1) · kick side bar (M5.2) · kick flow (M5.3) · hold-Tab
 // overhead map + minimap (M5.4). No aim aids anywhere (CLAUDE.md).
+import { createHelpOverlay } from '../ui/helpOverlay';
 import * as THREE from 'three';
 import { DEFAULT_SETTINGS } from '../game/settings';
 import { mapContent, type MapContent } from '../render/overheadMap';
@@ -191,6 +192,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
 
   // ---- maps (M5.4): positions only; no ball while aiming -------------------
   opts.overlay.append(hud.root, panel.el, toastEl);
+  const help = createHelpOverlay(opts.overlay, { button: false });
   const ballOnMap = (): boolean => flow.phase === 'playback' || flow.phase === 'hold';
   function content(): MapContent {
     const pb = flow.playback;
@@ -258,6 +260,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
   return {
     dispose() {
       if (toastTimer) clearTimeout(toastTimer);
+      help.dispose();
       maps.dispose();
       flow.dispose();
       panel.dispose();

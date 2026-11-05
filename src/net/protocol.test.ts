@@ -125,6 +125,14 @@ describe('host message guards', () => {
     expect(parseHostMessage({ v: 2, t: 'reject', reason: 'whatever' })).toBeNull();
   });
 
+  it('accepts settings with or without a kit pair, rejects a non-integer one', () => {
+    const settings = { ...state.settings };
+    expect(parseHostMessage({ v: 1, t: 'settings', settings: { ...settings, kitPair: 2 } })).not.toBeNull();
+    const { kitPair: _drop, ...older } = settings;
+    expect(parseHostMessage({ v: 1, t: 'settings', settings: older })).not.toBeNull();
+    expect(parseHostMessage({ v: 1, t: 'settings', settings: { ...settings, kitPair: 'red' } })).toBeNull();
+  });
+
   it('rejects malformed host messages', () => {
     const broken = (f: (s: Record<string, unknown>) => void): GameState => {
       const s = clone(state) as unknown as Record<string, unknown>;

@@ -99,6 +99,7 @@ Before the settings UI exists (M13), code uses these defaults. All code reads fr
 | Kicks per match | 40 | 10–100, even (half-time at half) |
 | Shot timer | 20 s | off, or 10–60 s |
 | Placement timer | off | off, or 20–120 s |
+| Kit pair | Red · Blue | 4 pairs (`KIT_PAIRS`; the other three are colorblind-safe) |
 | Auto-speed slow rolls (per viewer) | on | on/off |
 
 ## 3. Architecture
@@ -175,6 +176,7 @@ footy/
    ├─ shared/                      # PURE
    │  ├─ pitch.ts                  # Law-1 constants + derivePitch(settings): lines, boxes, goals, spots
    │  ├─ rng.ts                    # seeded PRNG (mulberry32)
+   │  ├─ kits.ts                   # KIT_PAIRS + the active kit pair (M13.4)
    │  └─ math.ts                   # clamp, lerp, angle helpers
    ├─ sim/                         # PURE physics
    │  ├─ constants.ts              # §5.3 (units in comments)
@@ -213,7 +215,7 @@ footy/
    ├─ ui/                          # DOM overlays
    │  ├─ dom.ts  styles.css
    │  ├─ menu.ts  lobby.ts  toss.ts  placementPanel.ts  kickPanel.ts
-   │  └─ hud.ts  minimap.ts  screens.ts  help.ts
+   │  └─ hud.ts  minimap.ts  screens.ts  help.ts  helpOverlay.ts  kitTheme.ts  settingsPanel.ts
    └─ app/                         # glue per mode
       ├─ router.ts  session.ts     # Session interface + LocalSession
       ├─ inspect.ts                # M1 inspect view: pitch + goals, orbit camera, keys 1–4, ?debug axes/ruler
@@ -807,3 +809,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 - 2026-11-05 — M12.4: grass detail texture (`grassDetailPixels`) and a ball bump map; measured 120 draw calls in the busiest view (budget 150). No rules or constants changed.
 - 2026-11-05 — M13.1–M13.2: `ui/styles.css` is token-driven (kit colors are `--team-0` / `--team-1`, written at runtime in M13.4). New route `#/howto` (menu entry "How to play") rendered by `ui/help.ts`, whose rule text and control tables (`RULE_SECTIONS`, `KEY_ROWS`) also feed the in-match H overlay (M13.4); numbers come from `DEFAULT_SETTINGS` / `PHYS`. No rules or constants changed.
 - 2026-11-05 — M13.3: lobby settings (§2.9) are edited in a panel on the hot-seat setup and the host lobby; the guest sees them read-only. Protocol §8.2 (still version 1, additive): `welcome` may carry `settings`, and the host sends a `settings` message on every lobby change before the match; the guest's link handles it (it never reaches the session). `?shot=N` / `?place=N` only set the initial panel values now. No rules or constants changed.
+- 2026-11-05 — M13.4: `Settings.kitPair` (index into `shared/kits.ts` `KIT_PAIRS`: Red·Blue default, Orange·Navy, Yellow·Purple, White·Teal) is chosen in the lobby settings panel and synced like the other settings (protocol §8.2 stays v1: `kitPair` is optional on the wire). Team names are the seat names (already editable); kit names ("Red", "Teal") come from the pair. The in-match key help (H or the ? button) is `ui/helpOverlay.ts`, built on `ui/help.ts` `controlsTable()`. No rules or constants changed.

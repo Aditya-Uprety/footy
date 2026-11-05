@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { KIT_PAIRS } from '../shared/kits';
 import { DEFAULT_SETTINGS, defaultSettings, halfTimeAfter, sanitizeSettings, settingRange, validateSettings } from './settings';
 
 describe('settings (§2.9)', () => {
@@ -36,5 +37,13 @@ describe('settings (§2.9)', () => {
     expect(s.minOpponentDist).toBe(5);
     expect(s.pitchWidth).toBe(68);
     expect(validateSettings(s)).toEqual([]);
+  });
+
+  it('kitPair is an index into KIT_PAIRS and sanitizes to a valid one', () => {
+    expect(DEFAULT_SETTINGS.kitPair).toBe(0);
+    expect(sanitizeSettings({ kitPair: 2 }).kitPair).toBe(2);
+    expect(sanitizeSettings({ kitPair: 99 }).kitPair).toBe(KIT_PAIRS.length - 1);
+    expect(sanitizeSettings({ kitPair: 'x' }).kitPair).toBe(0);
+    expect(validateSettings({ ...defaultSettings(), kitPair: KIT_PAIRS.length })).not.toEqual([]);
   });
 });
