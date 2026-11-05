@@ -337,3 +337,53 @@ html, body {
   letter-spacing: 0.04em;
   pointer-events: none;
 }
+
+/* ---- Practice HUD + toasts (M5.5) ---- */
+.practice-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 300px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.ph-title { display: flex; align-items: baseline; justify-content: space-between; }
+.ph-title h1 { margin: 0 0 4px; font-size: 18px; }
+.ph-title a { color: var(--fg-dim); text-decoration: none; font-size: 13px; }
+.ph-possession { font-weight: 700; font-size: 15px; margin: 2px 0 4px; padding-left: 8px; border-left: 4px solid var(--fg-dim); }
+.ph-possession.team-0 { border-left-color: #d8352f; }
+.ph-possession.team-1 { border-left-color: #2c63d6; }
+.ph-last { color: var(--fg-dim); }
+.ph-score { margin: 4px 0; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; }
+.ph-row { display: flex; align-items: center; gap: 10px; margin: 6px 0 2px; }
+.ph-row button {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+.ph-row button:hover { background: rgba(255, 255, 255, 0.16); }
+.ph-seed { color: var(--fg-dim); font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ph-keys { margin: 6px 0 0; color: var(--fg-dim); font-size: 11.5px; line-height: 1.45; }
+.toast {
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 26px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.62);
+  font: 800 34px/1.1 var(--font);
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  animation: toast-in 0.25s ease-out;
+}
+.toast-goal { color: var(--accent); font-size: 48px; }
+.toast-save { color: #9fe2a8; }
+.toast-out { color: #ffb4a6; font-size: 26px; }
+.toast-post { color: #e0e0ff; font-size: 26px; }
+@keyframes toast-in { from { opacity: 0; transform: translateX(-50%) scale(0.85); } to { opacity: 1; transform: translateX(-50%) scale(1); } }

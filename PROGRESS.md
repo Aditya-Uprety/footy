@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M5 — Aiming and kicking (Practice mode) (M0–M4 done)
-- **Next task:** M5.5 Practice mode `#/practice` (seeded 22-player layout, closest player gets the ball, goals/outs → center kickoff)
+- **Next task:** M5.A acceptance checks (browser pane + webgl-shot)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M5.4 done)
+- **Last updated:** 2026-11-05 (M5.5 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -58,7 +58,7 @@
 - [x] M5.2 Kick side bar (Power / Curve / Loft / height / KICK + keys + restart caps)
 - [x] M5.3 Kick flow: wind-up → simulate → playback → ease to next kicker
 - [x] M5.4 Hold-Tab overhead map + always-on minimap (no facing info)
-- [ ] M5.5 Practice mode `#/practice`
+- [x] M5.5 Practice mode `#/practice`
 - [ ] M5.A Acceptance checks passed (browser pane) and reported to the user
 
 ## M6 — Rules engine · Opus 5.5 High
