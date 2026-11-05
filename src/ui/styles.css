@@ -334,7 +334,7 @@ html, body {
 .touch-bar {
   position: absolute;
   left: 14px;
-  top: 104px;
+  top: var(--tb-top, 104px);
   display: flex;
   flex-direction: row;
   gap: 4px;
@@ -920,3 +920,173 @@ kbd { display: inline-block; padding: 1px 7px; border-radius: var(--radius-sm); 
 .replay-tag { font: 800 12px/1 var(--font); letter-spacing: 0.12em; color: var(--accent); }
 .replay-group { display: inline-flex; gap: 4px; }
 @media (max-width: 760px) { .replay-ui { bottom: 8px; padding: 0 8px; } }
+
+/* ---- Phone landscape layout (M16.2) ----
+   Short viewports (a phone held sideways is ~320–430 px tall): everything shrinks
+   and docks to the edges so the 3D view keeps the middle. --rail is the width of
+   the kick bar; centered HUD pieces center in the space left of it. */
+@media (max-height: 520px) {
+  :root { --rail: 232px; }
+  /* cards leave a band for the sound control: at the bottom, or at the top during a match */
+  .card { top: calc(50% - 20px); padding: 12px 16px; max-height: calc(100vh - 52px); border-radius: 12px; }
+  #ui:has(.match-hud, .practice-hud, .placement-panel) .card { top: calc(50% + 20px); }
+  .card h1 { margin-bottom: 8px; font-size: 20px; }
+  .card p { font-size: 13px; line-height: 1.35; }
+  .card-actions { margin-top: 10px; }
+  .menu-title { font-size: 30px !important; }
+  .menu-sub { margin-bottom: 10px; }
+  .menu { width: min(600px, calc(100vw - 24px)); }
+  .menu-items { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .menu-item { padding: 8px 12px; }
+  .menu-item strong { font-size: 15px; }
+  .menu-item small { font-size: 12px; }
+  .menu-foot { margin-top: 8px; }
+  .toss-faces { display: none; }
+  .coin-wrap { margin: 6px auto 4px; }
+  .coin { width: 76px; height: 76px; }
+  .coin-num { font-size: 30px; }
+  .coin-name { max-width: 60px; font-size: 9px; }
+  .toss-status { min-height: 0; margin: 4px 0; font-size: 14px !important; }
+  .role-card { padding: 8px 10px; gap: 3px; }
+  .overlay-card h1 { font-size: 22px !important; }
+  .ov-goals { font-size: 30px; }
+  .help { padding: 0; }
+  .help-head { padding: 10px 16px 8px; }
+  .help-body { padding: 0 16px 12px; }
+  .stats-table { font-size: 13px; }
+  .log-details .log-list { max-height: 110px; }
+  .lobby .setup-field { margin-bottom: 8px; }
+  .room-code { font-size: 30px; }
+  .lobby-opponent:empty { display: none; }
+  .lobby-hint { display: none; }
+  /* host lobby in two columns: you + room on the left, settings + status on the right */
+  .lobby { width: min(640px, calc(100vw - 24px)); }
+  .lobby[data-screen='host-lobby'] { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; align-content: start; }
+  .lobby[data-screen='host-lobby'] > h1 { grid-column: 1 / -1; }
+  .lobby[data-screen='host-lobby'] > .setup-field { grid-column: 1; grid-row: 2; }
+  .lobby[data-screen='host-lobby'] > .lobby-room { grid-column: 1; grid-row: 3 / span 6; margin: 0; }
+  .lobby[data-screen='host-lobby'] > .settings { grid-column: 2; grid-row: 2 / span 2; margin: 0 0 8px; }
+  .lobby[data-screen='host-lobby'] > .net-pill,
+  .lobby[data-screen='host-lobby'] > p { grid-column: 2; }
+  .lobby[data-screen='host-lobby'] > .card-actions { grid-column: 1 / -1; }
+
+  /* top-left cluster: Menu, ?, L */
+  .hud-menu { top: 6px; left: 6px; padding: 5px 10px; font-size: 12px; }
+  .help-fab { top: 8px; left: 84px; width: 28px; height: 28px; font-size: 14px; }
+  .log-fab { left: 118px; font-size: 12px; }
+
+  /* scoreboard + possession banner */
+  .scoreboard { top: 6px; padding: 3px 10px 3px; }
+  .sb-row { gap: 8px; }
+  .sb-side { min-width: 0; gap: 6px; }
+  .sb-name { max-width: 76px; font-size: 12px; }
+  .sb-kit { padding: 1px 6px; font-size: 11px; }
+  .sb-goals { min-width: 54px; font-size: 20px; }
+  .sb-counter { margin-top: 1px; font-size: 11px; }
+  .poss-banner { top: 50px; left: calc((100% - var(--rail)) / 2); max-width: calc(100% - var(--rail) - 130px); padding: 4px 12px 4px 8px; gap: 8px; overflow: hidden; }
+  .poss-text strong { font-size: 14px; }
+  .poss-text small { font-size: 11px; }
+  .shot-timer, .timer-svg { width: 34px; height: 34px; }
+  .timer-num { font-size: 12px; }
+  .toast { top: 70px; left: calc((100% - var(--rail)) / 2); padding: 6px 18px; font-size: 24px; }
+  .toast-goal { font-size: 34px; }
+  .toast-out, .toast-post { font-size: 20px; }
+  .toast-info { font-size: 22px; }
+  .match-hud .toast small { margin-top: 2px; font-size: 13px; }
+  .pick-banner { top: 6px; padding: 5px 14px 5px 12px; font-size: 13px; }
+  .pick-banner strong { font-size: 16px; }
+  .pick-banner small { font-size: 11px; }
+
+  /* kick bar: a full-height rail on the right, the tracks stretch to fit */
+  .kick-panel { top: 50px; bottom: 6px; right: 6px; transform: none; gap: 6px; padding: 8px; }
+  .kp-row { flex: 1 1 0; min-height: 0; gap: 4px; }
+  .kp-slider { width: 46px; min-height: 0; gap: 2px; }
+  .kp-label { font-size: 11px; }
+  .kp-value { font-size: 11px; }
+  .kp-track, .kp-curve .kp-track { flex: 1 1 0; height: auto; min-height: 36px; }
+  .kp-sep { margin: 14px 0 20px; }
+  .kp-kick { flex: none; padding: 8px 0; font-size: 16px; }
+  .kp-kick small { display: none; }
+  .kp-note { max-width: 190px; font-size: 10.5px; }
+
+  /* bottom-left minimap, bottom-right sound, bottom replay bar */
+  .minimap { bottom: 8px; transform: scale(0.6); transform-origin: 0 100%; }
+  .touch-ui .minimap { left: 62px; }
+  .sound-ctl { right: 6px; bottom: 6px; }
+  #ui:has(.match-hud, .practice-hud, .placement-panel) .sound-ctl { top: 6px; bottom: auto; }
+  .replay-ui { left: 152px; right: calc(var(--rail) + 6px); bottom: 8px; padding: 0 6px; }
+  .touch-ui .replay-ui { left: 208px; }
+  .replay-bar { gap: 6px; padding: 5px 8px; }
+  .map-hint { top: 6px; }
+
+  /* touch buttons: one column on the left edge, under the Menu button */
+  .touch-bar { left: 6px; top: var(--tb-top-compact, 46px); flex-direction: column; gap: 3px; padding: 3px; }
+  .tb-btn { width: 44px; height: 36px; border-radius: 8px; }
+  .tb-icon { font-size: 16px; }
+  .tb-btn small { margin-top: 1px; font-size: 8px; }
+
+  /* draft */
+  .placement-panel { top: 50px; right: 6px; width: 214px; max-height: calc(100% - 56px); gap: 6px; padding: 8px 10px; font-size: 12px; }
+  .pp-who { font-size: 14px; }
+  .pp-legend { gap: 2px; padding-top: 4px; font-size: 11px; }
+  .pp-keys { display: none; }
+
+  /* practice HUD */
+  .practice-hud { top: 6px; left: 6px; width: 204px; padding: 6px 10px; font-size: 12px; }
+  .ph-title h1 { margin: 0; font-size: 15px; }
+  .ph-possession { margin: 2px 0; font-size: 13px; }
+  .ph-score { margin: 2px 0; font-size: 11px; }
+  .ph-row { margin: 3px 0 0; }
+  .ph-last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+  .ph-score, .ph-keys, .ph-seed { display: none; }
+
+  /* hot-seat setup: the two names side by side, the rest full width */
+  .setup-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  .setup-form > :not(.setup-field) { grid-column: 1 / -1; }
+  .setup-field { min-width: 0; }
+  .setup-field input { width: 100%; min-width: 0; padding: 6px 10px; }
+  .setup .settings { margin: 0; }
+  .setup-note { display: none; }
+}
+
+@media (max-height: 520px) and (hover: none) {
+  .sound-ctl .sound-slider { width: 56px; }
+}
+
+/* A touch phone held sideways: bigger hit areas, a wider rail. */
+@media (max-height: 520px) and (pointer: coarse) {
+  :root { --rail: 256px; }
+  .kp-slider { width: 54px; }
+  .kp-track { width: 22px; margin: 6px 0; }
+  .kp-thumb { width: 42px; height: 22px; margin-left: -21px; margin-bottom: -11px; }
+  .kp-kick { padding: 10px 0; }
+}
+
+/* Very short screens (iPhone SE class, ~320 px tall). */
+@media (max-height: 360px) {
+  .minimap { transform: scale(0.48); }
+  .touch-ui .minimap { left: 58px; }
+  .tb-btn { height: 32px; }
+  .tb-icon { font-size: 14px; }
+  .toss-roles { gap: 8px; }
+}
+
+/* ---- Rotate prompt (M16.2) ---- */
+.rotate-prompt {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: var(--bg);
+  text-align: center;
+  pointer-events: auto;
+}
+.rotate-icon { width: 84px; height: 84px; color: var(--accent); animation: rotate-hint 2.4s ease-in-out infinite; }
+.rotate-prompt h1 { margin: 0; font-size: 24px; }
+.rotate-prompt p { margin: 0; max-width: 300px; color: var(--fg-dim); font-size: 15px; line-height: 1.45; }
+@keyframes rotate-hint { 0%, 15% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }

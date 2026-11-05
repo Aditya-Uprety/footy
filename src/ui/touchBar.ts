@@ -27,6 +27,8 @@ export interface TouchBarOptions {
   overlay: HTMLElement;
   /** CSS top offset when the default (under the match buttons) is taken, e.g. below the Practice card. */
   top?: string;
+  /** Same for the phone-landscape layout, where the bar is a column on the left edge (M16.2). */
+  topCompact?: string;
   /** Hold: the overhead map. */
   onMap(on: boolean): void;
   /** Hold: fast-forward the playback. */
@@ -87,7 +89,8 @@ export function createTouchBar(opts: TouchBarOptions): TouchBar {
     tapButton('▲', 'Up', 'higher', () => opts.onHeight(HEIGHT_TAP_STEP)),
     tapButton('▼', 'Down', 'lower', () => opts.onHeight(-HEIGHT_TAP_STEP)),
   );
-  if (opts.top) el.style.top = opts.top;
+  if (opts.top) el.style.setProperty('--tb-top', opts.top);
+  if (opts.topCompact) el.style.setProperty('--tb-top-compact', opts.topCompact);
   opts.overlay.append(el);
   return {
     el,

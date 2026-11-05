@@ -5,10 +5,10 @@
 > Task details and acceptance criteria live in PLAN.md §12.
 
 ## Status
-- **Current milestone:** M16 in progress (M0–M15 done; M16.1 done)
-- **Next task:** M16.2 Responsive landscape layout + rotate prompt
+- **Current milestone:** M16 in progress (M0–M15 done; M16.1–M16.2 done)
+- **Next task:** M16.3 Performance mode
 - **Model for next task:** Sonnet 5.5 · High effort
-- **Last updated:** 2026-11-05 (M16.1 done; live at https://aditya-uprety.github.io/footy/; two-device check on the user's Wi-Fi from M10 still to do by the user)
+- **Last updated:** 2026-11-05 (M16.2 done; live at https://aditya-uprety.github.io/footy/; two-device check on the user's Wi-Fi from M10 still to do by the user)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes). Nothing pushed since M13: the live site does not have audio yet (push only when the user says so).
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -137,7 +137,7 @@
 
 ## M16 — Touch and mobile · Sonnet 5.5 High
 - [x] M16.1 Touch controls
-- [ ] M16.2 Responsive landscape layout + rotate prompt
+- [x] M16.2 Responsive landscape layout + rotate prompt
 - [ ] M16.3 Performance mode
 - [ ] M16.A Acceptance checks passed and reported to the user
 
@@ -191,3 +191,4 @@
 - 2026-11-05 — M15.4: see PLAN §14. New `app/userPrefs.ts` (+ test): one localStorage key `footy-prefs` with hot-seat names, the online name and the last settings; `startingSettings(flags)` = saved settings with the query flags on top. Hot-seat saves on Start (not under `?autoplace`); the host lobby saves settings on every change and the name on every keystroke; the join lobby saves the name when you press Join. Verified in the browser pane (dev server of this chat): hot-seat names Ada/Bo and 10 kicks were saved on Start and prefilled after a reload; the host lobby prefilled the saved name and settings summary, and typing a name saved it; only the expected WebGL console errors. Not checked: two-device flow (nothing about it changed on the wire). `npm run check` 51 files, 473 tests green.
 - 2026-11-05 — M15.A: `npm run check` 51 files, 475 tests green (new: userPrefs 7, replay retrace 2). **Replay retraces exactly:** a second `KickPlayback` of the stored `KickResult` gives identical ball positions and events (unit test), and slow motion hits the same points at the same playback times; earlier live checks (M15.1/15.2) covered the cameras, Skip and the timer. **Stats match a short match:** headless hot-seat (`?autoplace&seed=3`) with saved settings `kicksPerMatch: 10` (this also proved the saved settings are used): 10 scripted kicks → full-time at kick 10, stats card Red 9 kicks / 90 %, Blue 1 kick / 10 %, 0 shots, equal to the log (`stop` ×10, Blue's single kick = entry 6); the goal/save/corner counts were checked in M15.3 (crafted goal, saves, corner) and by `matchLog.test.ts`. No console errors. Not checked here: a real GPU look, and online stats on two devices.
 - 2026-11-05 — M16.1: see PLAN §14. `aimController` handles one-finger drag and two-finger pinch (`pinchFov`, tested); `ui/touchBar.ts` = hold-Map / hold-Fast / Cam / Up / Down buttons, only on `(pointer: coarse)` or with `?touch` (new flag, in `Flags`); kick sliders get 22 px tracks and 46×24 px handles on coarse pointers, double tap on Curve resets it. Wired into `playView` and `practice` (the Practice key list is replaced by a short touch hint). `scripts/webgl-shot.mjs` now has touch steps (`TOUCH=1 SIZE=844x390 node scripts/webgl-shot.mjs … tap: tdrag: pinch: thold:/trelease`; coordinates from JS with `jstap:` etc.). Verified headless at 844×390 (coarse pointer + touch emulation): one-finger drag 200 px = 30°; pinch 100→200 px halves the FOV, pinch-in widens it (clamped 20–75°); Up/Down change the height by 0.5 m; holding Map shows the map and hides the kick bar, releasing closes it; Fast and Cam buttons call the flow during playback; touch drags on Power/Loft/Curve set values; double tap on Curve → 0; tapping KICK starts the wind-up; no console errors; the bar is absent without touch (desktop run). **Known / for M16.2:** at 844×390 the kick bar takes ~40 % of the width and its loft/camera value labels sit close to the handles; the bar row sits under Menu / ? / L, and the minimap is still full size; the HUD, replay bar and half-time card were not re-laid-out for phones. Not tried: a real phone or tablet (user check in M16.A). `npm run check` 52 files, 479 tests green.
+- 2026-11-05 — M16.2: see PLAN §14. CSS-only layout in one `@media (max-height: 520px)` block at the end of `ui/styles.css` + `ui/rotatePrompt.ts` (pure `needsRotatePrompt`, tested; wired in `main.ts`, which also sets `html.touch-ui`). Verified headless at 844×390, 667×375 and 568×320 (coarse pointer + touch emulation): menu, hot-seat setup, toss, draft, match aim view with the kick rail, touch column, minimap, scoreboard, possession banner, replay button, H and L overlays, Practice, host and join lobbies, How to play; portrait 390×844 shows the rotate card, Play anyway hides it, landscape and desktop never show it; a 1000×450 mouse window and 1280×720 look right (the desktop layout is untouched). No console errors. **Not checked:** half-time/full-time cards and the replay bar at phone size (same card CSS as the stats/log cards that were checked), a real phone (user check in M16.A). Known: at 568 px wide the rail takes ~45 % of the width; the Camera slider could be dropped on touch if that feels cramped (Up/Down buttons do the same). `npm run check` 53 files, 483 tests green.

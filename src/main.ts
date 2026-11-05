@@ -15,7 +15,9 @@ import { derivePitch } from './shared/pitch';
 import { clear, h } from './ui/dom';
 import { howToPlayScreen } from './ui/help';
 import { menuScreen } from './ui/menu';
+import { createRotatePrompt } from './ui/rotatePrompt';
 import { createSoundControl } from './ui/soundControl';
+import { isTouchUi } from './ui/touchBar';
 import { placeholderScreen } from './ui/placeholders';
 
 const flags = getFlags();
@@ -34,6 +36,9 @@ uiEl.append(screenEl);
 app.append(stageEl, uiEl);
 // One speaker control for every screen; it lives outside #screen, which the router clears.
 createSoundControl(audio, uiEl);
+// Touch UI: a class for layout rules, and a rotate prompt for phones held upright (M16.2).
+document.documentElement.classList.toggle('touch-ui', isTouchUi(flags.touch));
+createRotatePrompt(uiEl, { touchFlag: flags.touch });
 
 function tryCreateStage(): Stage | null {
   try {

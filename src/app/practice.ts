@@ -230,6 +230,7 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
     ? createTouchBar({
         overlay: opts.overlay,
         top: '162px',
+        topCompact: '108px',
         onMap: showMap,
         onFast: (on) => flow.setFastForward(on),
         onCamera: () => flow.toggleCamera(),
