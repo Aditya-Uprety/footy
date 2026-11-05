@@ -54,6 +54,22 @@ describe('procedural sounds (M14.1)', () => {
     expect(rms(k, 0, Math.round(RATE * 0.05))).toBeGreaterThan(rms(k, Math.round(RATE * 0.15)) * 3);
   });
 
+  it('ball sounds on grass are not drums: little energy below ~200 Hz (M17.2c)', () => {
+    // Two one-pole low-passes at 200 Hz keep the boom; a drum-like kick (the
+    // old 62→150 Hz sine) kept ~99 % of its energy here.
+    const lowShare = (x: Float32Array): number => {
+      const y = Float32Array.from(x);
+      for (let pass = 0; pass < 2; pass++) {
+        const a = 1 - Math.exp((-2 * Math.PI * 200) / RATE);
+        let s = 0;
+        for (let i = 0; i < y.length; i++) y[i] = s += a * (y[i]! - s);
+      }
+      return (rms(y) / rms(x)) ** 2;
+    };
+    expect(lowShare(kickSound(RATE))).toBeLessThan(0.2);
+    expect(lowShare(bounceSound(RATE))).toBeLessThan(0.45);
+  });
+
   it('the bar rings longer than the post', () => {
     expect(barSound(RATE).length).toBeGreaterThan(postSound(RATE).length);
   });

@@ -103,37 +103,63 @@ function noiseBurst(rate: number, seconds: number, cutoff: number, decay: number
 
 // ---- impacts -----------------------------------------------------------------
 
-/** A boot striking the ball: a short low "thump" with a leathery click. */
-export function kickSound(rate = SAMPLE_RATE): Float32Array {
-  const out = sweepTone(rate, 0.24, 62, 150, 0.018, 0.055).map((v, i) => v * (1 - Math.exp(-i / rate / 0.0015)));
-  mixInto(out, noiseBurst(rate, 0.24, 2600, 0.007, 11), 0.7);
-  return fadeOut(normalize(out), 0.02, rate);
+/**
+ * Grass blades: sparse tiny grains of high noise, so it rustles instead of
+ * hissing. `grainsPerSec` sets how dense the rustle is.
+ */
+function grassRustle(rate: number, n: number, grainsPerSec: number, seed: number): Float32Array {
+  const rng = createRng(seed);
+  const out = new Float32Array(n);
+  const keep = Math.exp(-1 / (rate * 0.0012));
+  let env = 0;
+  for (let i = 0; i < n; i++) {
+    if (rng.next() < grainsPerSec / rate) env += 0.4 + rng.next();
+    env *= keep;
+    out[i] = env * (rng.next() * 2 - 1);
+  }
+  return highpass(lowpass(lowpass(out, 6000, rate), 6000, rate), 1500, rate);
+}
+
+/** Multiplies `x` in place by an envelope `env(t)`. */
+function shape(x: Float32Array, rate: number, env: (t: number) => number): Float32Array {
+  for (let i = 0; i < x.length; i++) x[i] = x[i]! * env(i / rate);
+  return x;
 }
 
 /**
- * The ball bouncing on grass: a short, dull "thup" (M17). The old version was
- * a 60 ms sine and rang like an empty drum; a real ball on turf has almost no
- * pitch, so this is mostly a damped noise slap with a very brief low body
- * (12 ms, no ring) and a faint grass brush on top.
+ * A boot striking the ball on grass (M17.2c). No tone at all (the old sine
+ * sweep was literally a drum-machine kick): a short leathery "pok" of
+ * band-passed noise, a pitchless low push, and the boot scuffing the turf.
+ */
+export function kickSound(rate = SAMPLE_RATE): Float32Array {
+  const n = alloc(rate, 0.26).length;
+  const pok = shape(lowpass(bandpass(whiteNoise(n, 11), (t) => 650 + 900 * Math.exp(-t / 0.006), 0.9, rate), 2400, rate), rate, (t) => Math.exp(-t / 0.013));
+  const push = shape(lowpass(lowpass(whiteNoise(n, 13), 320, rate), 320, rate), rate, (t) => Math.exp(-t / 0.018));
+  const scuff = shape(grassRustle(rate, n, 2600, 17), rate, (t) => (1 - Math.exp(-t / 0.004)) * Math.exp(-t / 0.05));
+  const out = new Float32Array(n);
+  mixInto(out, normalize(pok, 1), 1);
+  mixInto(out, normalize(push, 1), 0.45);
+  mixInto(out, normalize(scuff, 1), 0.12);
+  shape(out, rate, (t) => 1 - Math.exp(-t / 0.0008));
+  return fadeOut(normalize(out), 0.03, rate);
+}
+
+/**
+ * The ball landing on grass (M17.2c): a soft, muffled "fff-thup" with no pitch
+ * (the old one still had a short low sine and sounded like a drum), led by a
+ * rustle of crushed grass.
  */
 export function bounceSound(rate = SAMPLE_RATE): Float32Array {
-  const len = 0.16;
-  const n = alloc(rate, len).length;
-  // Leather on turf: band-passed noise whose center falls 650 → 280 Hz, gone in ~20 ms.
-  const slap = bandpass(whiteNoise(n, 23), (t) => 280 + 370 * Math.exp(-t / 0.01), 0.8, rate);
-  for (let i = 0; i < n; i++) slap[i] = slap[i]! * Math.exp(-i / rate / 0.02);
-  // Weight without a note: a low body that dies before it can ring.
-  const body = sweepTone(rate, len, 150, 85, 0.006, 0.012);
-  // Grass blades: a quiet high brush.
-  const grass = highpass(whiteNoise(n, 29), 2800, rate);
-  for (let i = 0; i < n; i++) grass[i] = grass[i]! * Math.exp(-i / rate / 0.03);
+  const n = alloc(rate, 0.18).length;
+  // The ball pressing into the turf: dull low-passed noise, no ring.
+  const thup = shape(lowpass(lowpass(whiteNoise(n, 23), 480, rate), 480, rate), rate, (t) => Math.exp(-t / 0.016));
+  // Grass blades crushed and springing back.
+  const blades = shape(grassRustle(rate, n, 3200, 29), rate, (t) => (1 - Math.exp(-t / 0.003)) * Math.exp(-t / 0.04));
   const out = new Float32Array(n);
-  mixInto(out, normalize(slap, 1), 1);
-  mixInto(out, body, 0.55);
-  mixInto(out, grass, 0.05);
-  // A 1 ms attack so the start doesn't click.
-  for (let i = 0; i < n; i++) out[i] = out[i]! * (1 - Math.exp(-i / rate / 0.001));
-  return fadeOut(normalize(out), 0.03, rate);
+  mixInto(out, normalize(thup, 1), 1);
+  mixInto(out, normalize(blades, 1), 0.3);
+  shape(out, rate, (t) => 1 - Math.exp(-t / 0.001));
+  return fadeOut(normalize(out, 0.85), 0.04, rate);
 }
 
 /** The ball hitting a player: a dull body thud. */
