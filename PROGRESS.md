@@ -6,9 +6,9 @@
 
 ## Status
 - **Current milestone:** M9 — Networking and lobby (M0–M8 done)
-- **Next task:** M9.2 `net/peer.ts` (PeerJS, room codes, ICE, errors)
+- **Next task:** M9.3 Lobby UI (host / join / link / status + RTT)
 - **Model for next task:** Opus 5.5 · High effort
-- **Last updated:** 2026-11-05 (M9.1 done)
+- **Last updated:** 2026-11-05 (M9.2 done)
 - **Notes / blockers:** browser pane has no WebGL here; use `scripts/webgl-shot.mjs` for 3D checks (see Notes)
 
 ## M0 — Scaffold and tooling · Opus 5.5 High
@@ -88,7 +88,7 @@
 
 ## M9 — Networking and lobby · Opus 5.5 High
 - [x] M9.1 `net/protocol.ts` + `net/transport.ts` (Loopback)
-- [ ] M9.2 `net/peer.ts` (PeerJS, room codes, ICE, errors)
+- [x] M9.2 `net/peer.ts` (PeerJS, room codes, ICE, errors)
 - [ ] M9.3 Lobby UI (host / join / link / status + RTT)
 - [ ] M9.4 Handshake, heartbeat, disconnect overlay
 - [ ] M9.5 Protocol + handshake tests
