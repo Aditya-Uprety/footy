@@ -28,7 +28,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   minTeammateDist: 8,
   minOpponentDist: 4,
   kicksPerMatch: 40,
-  shotTimerSec: 20,
+  shotTimerSec: 30,
   placementTimerSec: 0,
   kitPair: DEFAULT_KIT_PAIR,
 });

@@ -42,13 +42,13 @@ Model tags used below: **[Opus 5.5 High]** = core build · **[Sonnet 5.5 High]**
 ### 2.3 Placement phase (snake draft)
 1. Schedule, 12 picks: **A1, B2, A2, B2, A2, B2, A2, B2, A2, B2, A2, B1**, giving 11 players each.
 2. During a pick the active seat places its 1–2 players, may drag or undo them, then confirms. The opponent sees them only after Confirm. Confirmed players are final.
-3. Each team places **exactly one goalkeeper** (GK toggle) at any pick. If a team's remaining slots would otherwise run out, its last slot is forced to be the GK.
+3. Each team places **at most one goalkeeper** (GK toggle) at any pick. If a team's remaining slots would otherwise run out, its last slot is forced to be the GK, **unless one of its outfield players already stands in its own penalty area**: then the keeper is optional and the team may play without one (M17). A team without a keeper takes goal kicks with its player closest to the center of its own goal line.
 4. A spot (player center (x, z)) is **legal** when all of these hold:
    - a. **In the field with a 1 m margin**: |x| ≤ L/2 − 1 and |z| ≤ W/2 − 1.
    - b. **Hitbox fully outside the center circle**: √(x² + z²) ≥ 9.15 + R (R = hitbox radius, §2.5).
    - c. **GK inside its own penalty area** (center within the box lines; rule a still applies). Outfield players may stand anywhere else, **including either penalty area**.
    - d. **≥ X = 8 m from every teammate** and **≥ Y = 4 m from every opponent**, measured center to center.
-   - e. **GK feasibility guard**: a pick is illegal if, afterwards, a team that has not placed its GK yet would have no legal GK spot left in its own box (checked on a 0.25 m grid).
+   - e. **GK feasibility guard**: a pick is illegal if, afterwards, a team that still needs its GK (none placed and no outfield player in its own box) would have no legal GK spot left in its own box (checked on a 0.25 m grid).
 5. Optional placement timer (lobby, default off). On expiry the rest of the pick is filled with random legal spots (GK if forced).
 6. After pick 12 the match starts with Team A's kickoff.
 
@@ -56,14 +56,14 @@ Model tags used below: **[Opus 5.5 High]** = core build · **[Sonnet 5.5 High]**
 1. Exactly one team has possession at a time, held by a kicker (a player or a ghost taker).
 2. **Aiming**: the possessing seat rotates 360° and sets **Power** (0–100 %), **Curve** (−100…+100 %, + bends right), **Loft** (0–55°), then kicks (§5.6).
 3. **Allowed view aids**: scroll zoom (FOV), adjustable camera height along the kick line (1.7–8 m), hold-Tab overhead map, always-on minimap. Both maps show **positions only**: fixed orientation, no facing direction, no view cone, the kicker marked at its own center rather than the ball's offset position. **Never**: aim arrow, trajectory, landing marker, crosshair.
-4. **Shot timer**: 20 s. It starts when the kicker's view is ready (after playback and the camera move). At 0 the ball is **auto-kicked with the current direction and sliders**.
+4. **Shot timer**: 30 s (M17; was 20 s). It starts when the kicker's view is ready (after playback and the camera move). At 0 the ball is **auto-kicked with the current direction and sliders**.
 5. **Every kick counts** toward the match total, including kickoffs and restarts.
 6. After a kick, both seats watch the playback, then the next possession applies (§2.5–2.7).
 
 ### 2.5 Ball in play
 1. Physics per §5: drag, curve (Magnus), bounces, rolling friction.
 2. The ball **bounces off any player** it hits and continues. Outfield hitbox: radius 0.40 m, 1.85 m tall. It can be lofted over players.
-3. **Goalkeepers**: hitbox radius 0.90 m, 2.30 m tall at the center (arms spread). A ball that **touches a keeper is caught**: play stops at once and the keeper's team kicks next, from where the keeper stands.
+3. **Goalkeepers**: hitbox radius 1.25 m, 2.30 m tall at the center (arms spread; M17, was 0.90 m). A ball that **touches a keeper is caught**: play stops at once and the keeper's team kicks next, from where the keeper stands.
 4. Posts, crossbar and nets are solid.
 5. The ball **stops** when it rolls slower than 0.05 m/s (hard cap: 30 s of simulated time).
 6. **Possession after a stop**: the player whose center is closest to the ball in 2D. Ties within 0.01 m go to the team that **did not take the kick**; if still tied, the lower player id.
@@ -79,7 +79,7 @@ Model tags used below: **[Opus 5.5 High]** = core build · **[Sonnet 5.5 High]**
 5. "Last touch" means the team of the last player the ball hit; with no contact, the kicking team.
 
 ### 2.7 Kickoff, halves, end
-1. **Kickoff**: a ghost taker on the center spot; any direction; full power allowed; may score directly.
+1. **Kickoff**: a ghost taker on the center spot; any direction; **power capped at 50 %** (M17; a capped kickoff rolls ~37 m at most, so it can't reach the goal without a deflection); curve and loft free; a goal straight from a kickoff still counts.
 2. Match = **40 kicks** (lobby-adjustable, even). **Half-time** comes after kick 20 resolves: the score is kept, the ball returns to the center, and the team that didn't take the opening kickoff kicks off. No change of ends, no re-placement.
 3. **Full-time** comes after kick 40 resolves; a goal on that kick counts. Higher score wins; **level = draw**.
 4. **Rematch**: a new coin toss and a fresh draft.
@@ -97,7 +97,7 @@ Before the settings UI exists (M13), code uses these defaults. All code reads fr
 | Teammate spacing X | 8 m | 5–15 |
 | Opponent spacing Y | 4 m | 2 … X − 1 |
 | Kicks per match | 40 | 10–100, even (half-time at half) |
-| Shot timer | 20 s | off, or 10–60 s |
+| Shot timer | 30 s | off, or 10–60 s |
 | Placement timer | off | off, or 20–120 s |
 | Kit pair | Red · Blue | 4 pairs (`KIT_PAIRS`; the other three are colorblind-safe) |
 | Auto-speed slow rolls (per viewer) | on | on/off |
@@ -247,7 +247,7 @@ Yaw θ → kick direction **d̂ = (cos θ, 0, sin θ)**; the kicker's right is *
 ### 5.2 Bodies
 - **Ball**: r = 0.11 m, m = 0.43 kg.
 - **Outfield hitbox**: vertical cylinder of radius R = 0.40 from y = 0 to Hc = 1.45, capped by a hemisphere of radius R centered at (x, Hc, z), so the top is at 1.85 m.
-- **GK hitbox**: R = 0.90, Hc = 1.40, top at 2.30 m. Any contact means a catch.
+- **GK hitbox**: R = 1.25, Hc = 1.05, top at 2.30 m (M17; was R 0.90, Hc 1.40). Any contact means a catch.
 - **Posts**: vertical capsules of radius 0.06 from y = 0 to y = 2.50 at x = ±(L/2 + 0.06), z = ±3.72. **Crossbar**: horizontal capsule of radius 0.06 at y = 2.50 between the post tops. So the inner post edges are at |z| = 3.66, the bar underside at y = 2.44, and the front faces sit flush with the goal line.
 - **Nets**: thin two-sided rectangles: back at x = ±(L/2 + 2.06); sides at z = ±3.72 from the line to the back; roof at y = 2.50.
 - **Ground**: the plane y = 0 everywhere, beyond the lines too.
@@ -270,15 +270,16 @@ Yaw θ → kick direction **d̂ = (cos θ, 0, sin θ)**; the kicker's right is *
 | BOUNCE_KEEP_MIN | 0.6 | minimum fraction of horizontal speed kept per bounce (hollow sphere going to rolling) |
 | SPIN_KEEP_GROUND | 0.8 | spin kept per bounce |
 | V_SETTLE | 0.6 m/s | rebound speed below which the ball starts rolling |
-| MU_ROLL | 0.12 | rolling resistance (decel = MU_ROLL·G = 1.18 m/s²) |
+| MU_ROLL | 0.22 | rolling resistance (decel = MU_ROLL·G = 2.16 m/s²; M17, was 0.12) |
 | V_STOP | 0.05 m/s | stopped |
 | T_MAX | 30 s | simulation cap |
 | E_PLAYER / MU_PLAYER / SPIN_KEEP_PLAYER | 0.45 / 0.25 / 0.3 | player contacts |
 | E_FRAME / MU_FRAME / SPIN_KEEP_FRAME | 0.70 / 0.10 / 0.6 | posts and bar |
 | E_NET / NET_TANGENT_KEEP | 0.10 / 0.5 | net contacts |
-| V_MIN / V_MAX | 3 / 32 m/s | kick speed at power 0 / 100 % |
+| V_MIN / V_MAX | 3 / 30 m/s | kick speed at power 0 / 100 % (M17: V_MAX was 32) |
 | LOFT_MAX | 55° | loft at 100 % |
 | THROW_POWER_CAP / THROW_HEIGHT | 0.45 / 1.8 m | throw-in limits |
+| KICKOFF_POWER_CAP | 0.5 | kickoff power cap (M17) |
 | KICK_GAP | 0.02 m | gap between the kicker's hitbox and the ball |
 | GRACE_DIST | 0.25 m | kicker's hitbox ignored until the ball is this far beyond it |
 | TAIL_GOAL / TAIL_OUT | 1.5 s / 1.0 s | visual-only simulation after a goal / out |
@@ -318,7 +319,7 @@ collideGround():   if p.y < r:
 A contact that leaves v.y > V_SETTLE (frame or net only) ends rolling.
 
 ### 5.6 Kick model
-Input: yaw θ, power p ∈ [0,1], curve c ∈ [−1,1], loft l ∈ [0,1], after restart caps (throw-in: p ≤ 0.45, c = 0).
+Input: yaw θ, power p ∈ [0,1], curve c ∈ [−1,1], loft l ∈ [0,1], after restart caps (throw-in: p ≤ 0.45, c = 0; kickoff: p ≤ 0.5).
 - speed **v0 = V_MIN + p·(V_MAX − V_MIN)**; loft angle **α = l · LOFT_MAX**
 - **v = v0 · (cos α · d̂ + sin α · ŷ)**
 - **ω = (0, −c·W_MAX, 0)**: clockwise seen from above when c > 0, which **curves the ball right** (toward r̂).
@@ -376,9 +377,9 @@ Playback: binary-search the frames by t and lerp between them; fire each event w
 
 | Kick | Planning check | Test range |
 |---|---|---|
-| Power 25 %, loft 0° (10.3 m/s pass) | stops at 29 m after 6.6 s | 25–34 m |
-| Power 50 %, loft 0° | 56 m | 48–63 m |
-| Power 100 %, loft 0° | 94 m | 85–103 m |
+| Power 25 %, loft 0° (9.75 m/s pass) | stops at 17 m (M17; was 29 m) | 15–20 m |
+| Power 50 %, loft 0° | 37 m (M17; was 56 m) | 32–41 m |
+| Power 100 %, loft 0° | 70 m (M17; was 94 m) | 62–77 m |
 | Power 100 %, loft 15° | carry 36 m, apex 3.0 m | carry 31–41, apex 2.5–3.6 |
 | Power 100 %, loft 35° | carry 53 m, apex 12 m | carry 48–58, apex 10–14 |
 | Power 30 %, loft 45° (chip) | carry 12 m, apex 3.3 m | carry 10.5–14, apex 2.9–3.8 |
@@ -386,7 +387,7 @@ Playback: binary-search the frames by t and lerp between them; fire each event w
 | Power 40 %, curve +100, loft 0° (ground) | 2.8 m right at 25 m downrange | +2.0…+3.6 m |
 | Any input, empty plane | — | ends < 12 s |
 
-Consequence for balance: the maximum carry (~53 m) only just reaches a goal from the center spot, so direct kickoff goals are possible but marginal. Watch this in M17.
+Consequence for balance: the maximum carry (~49 m since M17) falls short of a goal from the center spot, and kickoffs are capped at 50 % power (≤ ~37 m), so a kickoff only scores after a deflection. The air rows (loft ≥ 10°) still match their ranges after the M17 change (measured: P100 L15 carry 33.0 / apex 2.7; L35 49.3 / 11.0; chip 11.1 / 3.0; curve 4.4 and 2.9 m).
 
 ### 5.11 Determinism and performance
 - The sim loop uses only + − × ÷ and `Math.sqrt` (correctly rounded): no `Math.hypot`, `pow`, `exp`, `sin` or `cos` inside the loop. Trig runs once per kick, on the host. The host is authoritative, so cross-machine determinism is not relied on, but tests and replays are exact.
@@ -559,7 +560,7 @@ Host → Guest:
 | P2P fails behind strict NAT/CGNAT (some mobile networks) | Two STUN servers, a clear error message, optional TURN via env vars (documented in M11), and a `Transport` interface that allows a WebSocket relay later |
 | PeerJS cloud signaling outage or rate limit | PeerServer host configurable by env; "retry" guidance in the UI |
 | Kicking feels too easy or too hard without aids | Lab with live constants (M4), §5.10 targets, balance pass with the user (M17) |
-| Long-range or kickoff goals dominate against a static keeper | Max carry ≈ 53 m keeps kickoff goals marginal; knobs: V_MAX, GK size, an optional kickoff power cap |
+| Long-range or kickoff goals dominate against a static keeper | M17: kickoff power cap 50 %, GK radius 1.25 m, V_MAX 30; further knobs: GK size, MU_ROLL |
 | Waiting while the ball rolls | MU_ROLL tuning, fast-forward, auto 2× on slow rolls |
 | TS 7 / Vite 8 tooling friction | Pin versions in M0; fall back to the latest TS 6.x if needed |
 | WebGL performance on weak machines | DPR cap 2, shadow-map size option, performance mode (M16) |
@@ -832,3 +833,4 @@ AI opponent · penalty shootout as a tie-break option · spectators · shareable
 - 2026-11-05 — M16.1: **Touch controls.** `app/aimController.ts` tracks pointers: one finger = the mouse drag, two fingers = pinch zoom (`pinchFov`; spreading zooms in; lifting a finger ends the pinch without turning the view). `ui/touchBar.ts` (shown on `(pointer: coarse)` or with the new `?touch` flag) adds hold-Map, hold-Fast, Cam and height Up/Down buttons to the match and Practice views; the slider handles are larger on coarse pointers and a double tap on the Curve slider resets it. Nothing about the aim is shown. The bar sits in a compact row under the Menu / ? / L buttons; M16.2 tunes the full landscape layout. `scripts/webgl-shot.mjs` gained touch steps (`tap`, `tdrag`, `pinch`, `thold`/`trelease`, `TOUCH=1`). No rules or constants changed.
 - 2026-11-05 — M16.2: **Phone-landscape layout and rotate prompt.** One block at the end of `ui/styles.css` (`@media (max-height: 520px)`, plus `(pointer: coarse)` and `(max-height: 360px)` refinements) shrinks every screen for a phone held sideways: the kick bar becomes a full-height rail on the right (tracks stretch to fit; its width is the CSS variable `--rail`, and the centered HUD pieces — possession banner, toasts, replay bar — center in the space left of it), the touch buttons become one column on the left edge under Menu, the minimap is scaled to 0.6 (0.48 on ~320 px screens), the scoreboard, draft panel, Practice HUD and cards shrink, the menu becomes two columns, hot-seat setup puts the names side by side, the host lobby uses two columns. Cards leave a 44 px band for the sound control (bottom-right on menus, top-right during a match). `<html>` gets the class `touch-ui` (touch device or `?touch`) for layout rules that depend on the touch buttons. New `ui/rotatePrompt.ts`: a touch phone held upright (touch UI, taller than wide, narrower than 600 px) gets a full-screen "Turn your phone sideways" card with **Play anyway**; tablets and desktop windows never see it; the shot timer keeps running behind it. `touchBar` takes `topCompact` for the column's top offset. No rules or constants changed.
 - 2026-11-05 — M16.3: **Performance mode.** `render/quality.ts` (no Three.js; tested) defines two profiles: **high** (pixel ratio ≤ 2, 4096 shadow map, full crowd, MSAA) and **low** (pixel ratio ≤ 1.25, 1024 shadow map, 40 % crowd, no MSAA). The level is picked once at boot by `detectQuality`: `?perf=low|high` wins, otherwise touch-first devices (`(pointer: coarse)`), `saveData`, ≤ 2 GB of memory or ≤ 2 cores get **low**. A `FrameWatchdog` in the stage loop also drops high → low during a session when the frame rate stays under ~30 fps for two 2-second windows after a 4 s warm-up (hidden tabs and single frames > 0.5 s are ignored); the stage then lowers the pixel ratio, and `app/inspect.ts` shrinks the shadow map and rebuilds the stands with the thinner crowd. It never goes back up and nothing is saved; `?perf=…` switches the watchdog off. `?debug` shows the level in the FPS readout. No rules or constants changed.
+- 2026-11-05 — M17.1–M17.2: **balance pass from the user's playtest** (power too strong, a 50 % roll went from the halfway line to the goal; goals too easy; shot timer too short). Changes: V_MAX 32 → 30 and MU_ROLL 0.12 → 0.22 (ground rolls P25 17 m / P50 37 m / P100 70 m, rolls end sooner; the air rows of §5.10 are unchanged in range); keeper hitbox R 0.90 → 1.25 with Hc 1.40 → 1.05 (still 2.30 m tall; keeper figure arms lengthened, possessor ring widened); new `KICKOFF_POWER_CAP` = 0.5 (`KickCaps.kickoff`, also in Practice; the kick bar shows "Kickoff: power max 50%"); default shot timer 20 → 30 s (the user's saved prefs keep their old value). **Rule change (§2.3.3):** the last-slot keeper is no longer forced when one of the team's outfield players already stands in its own penalty area; such a team may play without a keeper (no catches; goal kicks go to its player closest to its goal-line center), and the GK guard (§2.3.4e) only protects teams that still need a keeper. Measured before the change: a static 0.9 m keeper caught only 9 of 31 straight ground kickoffs aimed inside the posts.

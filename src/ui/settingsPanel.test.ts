@@ -23,7 +23,7 @@ describe('settings panel model', () => {
     expect(formatSetting({ unit: 's' }, 0)).toBe('Off');
     expect(formatSetting({ unit: 'm' }, 105)).toBe('105 m');
     expect(formatSetting({ unit: '' }, 40)).toBe('40');
-    expect(settingsSummary(sanitizeSettings({}))).toBe('40 kicks · 20 s shot timer · 105 × 68 m');
+    expect(settingsSummary(sanitizeSettings({}))).toBe('40 kicks · 30 s shot timer · 105 × 68 m');
     expect(settingsSummary(sanitizeSettings({ shotTimerSec: 0, placementTimerSec: 45 }))).toContain('no shot timer');
     expect(settingsSummary(sanitizeSettings({ placementTimerSec: 45 }))).toContain('45 s per placement');
   });

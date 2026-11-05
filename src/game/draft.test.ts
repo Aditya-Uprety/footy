@@ -5,11 +5,13 @@ import {
   DRAFT_SCHEDULE,
   findGkSpot,
   gkForced,
+  gkNeeded,
   gkSpotExists,
   PICK_COUNT,
   PLAYERS_PER_TEAM,
   randomPick,
   spotsToPlayers,
+  teamHasBoxPlayer,
   validateSpots,
 } from './draft';
 import { defaultSettings } from './settings';
@@ -91,9 +93,10 @@ describe('validateSpots (§2.3.4)', () => {
 });
 
 describe('forced keeper (§2.3.3)', () => {
-  // A's nine outfielders, then pick 10 = A's last pick (A2) with no keeper yet.
+  // A's nine outfielders (none in its own box, which ends at x = −36), then
+  // pick 10 = A's last pick (A2) with no keeper yet.
   const nine: PlayerSpot[] = [];
-  for (const x of [-40, -30, -20]) for (const z of [-20, 0, 20]) nine.push(pl(nine.length + 1, 0, x, z));
+  for (const x of [-34, -24, -14]) for (const z of [-20, 0, 20]) nine.push(pl(nine.length + 1, 0, x, z));
   it('is forced only on the team’s last pick', () => {
     expect(gkForced(st(10, nine), 0)).toBe(true);
     expect(gkForced(st(8, nine), 0)).toBe(false);
@@ -101,9 +104,21 @@ describe('forced keeper (§2.3.3)', () => {
     expect(gkForced(st(11, [pl(1, 1, 48, 0, true)]), 1)).toBe(false);
   });
   it('rejects a last pick without a keeper, accepts one with', () => {
-    const out: SpotInput = { x: -10, z: 25, gk: false };
+    const out: SpotInput = { x: -4, z: 30, gk: false };
     expect(codes(validateSpots(st(10, nine), 0, [out, { x: -48, z: 10, gk: false }]))).toEqual(['gkForced']);
     expect(validateSpots(st(10, nine), 0, [out, { x: -48, z: 10, gk: true }])).toEqual([]);
+  });
+  it('is not forced when an outfield teammate already stands in the team’s own box (M17)', () => {
+    const inBox = [...nine.slice(0, 8), pl(9, 0, -45, 0)];
+    expect(teamHasBoxPlayer(pitch, inBox, 0)).toBe(true);
+    expect(gkNeeded(st(10, inBox), 0)).toBe(false);
+    expect(gkForced(st(10, inBox), 0)).toBe(false);
+    // The last pick may then be two outfielders; a keeper is still allowed.
+    expect(validateSpots(st(10, inBox), 0, [{ x: -4, z: 30, gk: false }, { x: -4, z: -30, gk: false }])).toEqual([]);
+    expect(validateSpots(st(10, inBox), 0, [{ x: -4, z: 30, gk: false }, { x: -50, z: 12, gk: true }])).toEqual([]);
+    // A player in the *opponent's* box doesn't count.
+    const farBox = [...nine.slice(0, 8), pl(9, 0, 45, 0)];
+    expect(gkForced(st(10, farBox), 0)).toBe(true);
   });
 });
 
@@ -120,20 +135,26 @@ describe('keeper feasibility guard (§2.3.4e)', () => {
     expect(s.z).toBeGreaterThan(12);
   });
 
-  it('blocks a pick that seals the team’s own box', () => {
+  it('does not stop a team filling its own box: it no longer needs a keeper (M17)', () => {
     const v = validateSpots(st(9, tiles), 1, [{ x: 48, z: 16, gk: false }, { x: -20, z: 0, gk: false }]);
-    expect(codes(v)).toEqual(['gkGuard']);
-    expect(v[0]!.message).toMatch(/your keeper/);
+    expect(v).toEqual([]);
     expect(gkSpotExists(pitch, settings, [...tiles, pl(99, 1, 48, 16)], 1)).toBe(false);
+    expect(gkForced(st(11, [...tiles, pl(99, 1, 48, 16)]), 1)).toBe(false);
   });
 
   it('blocks a pick that seals the opponent’s box', () => {
-    // A stands in the open corner; every remaining keeper spot is then < Y from it.
-    const v = validateSpots(st(2, tiles), 0, [{ x: 50, z: 18, gk: false }, { x: -20, z: 0, gk: false }]);
+    // Opponent spacing 7 m: A's outfielders on two rows inside B's (empty) box.
+    const wide = { ...settings, minOpponentDist: 7 };
+    const sealers: PlayerSpot[] = [];
+    for (const z of [-16, -8, 0, 8, 16]) sealers.push(pl(sealers.length + 1, 0, 40, z));
+    for (const z of [-12, -4, 4, 12]) sealers.push(pl(sealers.length + 1, 0, 48, z));
+    const at = { settings: wide, pick: 2, players: sealers };
+    expect(gkSpotExists(derivePitch(wide), wide, sealers, 1)).toBe(true);
+    const v = validateSpots(at, 0, [{ x: 48, z: 20, gk: false }, { x: 48, z: -20, gk: false }]);
     expect(codes(v)).toEqual(['gkGuard']);
     expect(v[0]!.message).toMatch(/other team's keeper/);
-    // In the corner but leaving a gap is fine.
-    expect(validateSpots(st(2, tiles), 0, [{ x: 51.5, z: 20, gk: false }, { x: -20, z: 0, gk: false }])).toEqual([]);
+    // Leaving a gap is fine.
+    expect(validateSpots(at, 0, [{ x: 48, z: 20, gk: false }, { x: -20, z: 0, gk: false }])).toEqual([]);
   });
 
   it('does not apply once the team has its keeper', () => {

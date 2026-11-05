@@ -1,6 +1,7 @@
 // Ball-flight physics on an empty plane (PLAN M2.5, §5.10).
 import { describe, expect, it } from 'vitest';
 import { kickStats, lateralAt } from './analyze';
+import { DEFAULT_SETTINGS } from '../game/settings';
 import { PHYS } from './constants';
 import { initialBallState, kickDirection, kickRight, kickoffSpot } from './kick';
 import { simulateKick } from './simulate';
@@ -125,7 +126,7 @@ describe('loft, spin and stopping', () => {
       prev = w;
     }
     expect(rollingSteps).toBeGreaterThan(50);
-    expect(prev).toBeLessThan(0.05 * PHYS.W_MAX);
+    expect(prev).toBeLessThan(0.1 * PHYS.W_MAX);
   });
 
   it('every slider extreme stops on its own within 12 s (well before T_MAX)', () => {
@@ -158,23 +159,32 @@ describe('loft, spin and stopping', () => {
 });
 
 describe('§5.10 tuning targets', () => {
-  it('power 25 %, loft 0° (pass): rolls 25–34 m', () => {
+  it('a kickoff at the power cap cannot reach the goal on its own, at any loft (M17)', () => {
+    const goalDist = DEFAULT_SETTINGS.pitchLength / 2;
+    for (let loftDeg = 0; loftDeg <= 55; loftDeg += 2.5) {
+      const s = kickStats(kick(PHYS.KICKOFF_POWER_CAP, loftDeg));
+      expect(s.total).toBeLessThan(goalDist - 12);
+    }
+  });
+
+
+  it('power 25 %, loft 0° (pass): rolls 15–20 m', () => {
     const s = kickStats(kick(0.25, 0));
     expect(s.carry).toBe(0);
-    expect(s.total).toBeGreaterThanOrEqual(25);
-    expect(s.total).toBeLessThanOrEqual(34);
+    expect(s.total).toBeGreaterThanOrEqual(15);
+    expect(s.total).toBeLessThanOrEqual(20);
   });
 
-  it('power 50 %, loft 0°: rolls 48–63 m', () => {
+  it('power 50 %, loft 0°: rolls 32–41 m', () => {
     const s = kickStats(kick(0.5, 0));
-    expect(s.total).toBeGreaterThanOrEqual(48);
-    expect(s.total).toBeLessThanOrEqual(63);
+    expect(s.total).toBeGreaterThanOrEqual(32);
+    expect(s.total).toBeLessThanOrEqual(41);
   });
 
-  it('power 100 %, loft 0°: rolls 85–103 m', () => {
+  it('power 100 %, loft 0°: rolls 62–77 m', () => {
     const s = kickStats(kick(1, 0));
-    expect(s.total).toBeGreaterThanOrEqual(85);
-    expect(s.total).toBeLessThanOrEqual(103);
+    expect(s.total).toBeGreaterThanOrEqual(62);
+    expect(s.total).toBeLessThanOrEqual(77);
   });
 
   it('power 100 %, loft 15°: carry 31–41 m, apex 2.5–3.6 m', () => {

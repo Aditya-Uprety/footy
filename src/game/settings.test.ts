@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, defaultSettings, halfTimeAfter, sanitizeSettings, set
 describe('settings (§2.9)', () => {
   it('defaults are valid and match the plan', () => {
     expect(validateSettings(defaultSettings())).toEqual([]);
-    expect(DEFAULT_SETTINGS).toMatchObject({ pitchLength: 105, pitchWidth: 68, minTeammateDist: 8, minOpponentDist: 4, kicksPerMatch: 40, shotTimerSec: 20, placementTimerSec: 0 });
+    expect(DEFAULT_SETTINGS).toMatchObject({ pitchLength: 105, pitchWidth: 68, minTeammateDist: 8, minOpponentDist: 4, kicksPerMatch: 40, shotTimerSec: 30, placementTimerSec: 0 });
     expect(halfTimeAfter(DEFAULT_SETTINGS)).toBe(20);
   });
 

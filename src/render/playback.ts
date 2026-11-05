@@ -56,7 +56,8 @@ export function sampleFrames(frames: Float32Array, t: number, out: Vec3): Vec3 {
   const b = a + FRAME_STRIDE;
   const ta = frames[a]!;
   const tb = frames[b]!;
-  const k = tb > ta ? Math.min(1, Math.max(0, (t - ta) / (tb - ta))) : 1;
+  // Frame times are float32: a t that rounds to tb (e.g. t = duration) is exactly frame b.
+  const k = tb > ta && Math.fround(t) < tb ? Math.min(1, Math.max(0, (t - ta) / (tb - ta))) : 1;
   out.x = frames[a + 1]! + (frames[b + 1]! - frames[a + 1]!) * k;
   out.y = frames[a + 2]! + (frames[b + 2]! - frames[a + 2]!) * k;
   out.z = frames[a + 3]! + (frames[b + 3]! - frames[a + 3]!) * k;

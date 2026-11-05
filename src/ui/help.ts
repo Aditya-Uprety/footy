@@ -22,6 +22,7 @@ export interface KeyRow {
 
 const S = DEFAULT_SETTINGS;
 const throwCapPct = Math.round(PHYS.THROW_POWER_CAP * 100);
+const kickoffCapPct = Math.round(PHYS.KICKOFF_POWER_CAP * 100);
 const loftMaxDeg = Math.round((PHYS.LOFT_MAX * 180) / Math.PI);
 
 /** Rules summary (PLAN §2), numbers from the default settings. */
@@ -41,7 +42,7 @@ export const RULE_SECTIONS: readonly HelpSection[] = [
     bullets: [
       'You place in turns of one or two players (a snake draft, 12 turns in all). Drag to move a spot, right-click or Undo to remove it, then Confirm. Your opponent sees your players only after you confirm.',
       `Stay ${S.minTeammateDist} m from your own players and ${S.minOpponentDist} m from the opponent’s, out of the center circle, and 1 m inside the lines.`,
-      'Each team needs exactly one goalkeeper, who must stand in their own penalty area. If you have not placed yours by your last slot, that slot becomes the keeper.',
+      'Each team may place one goalkeeper, who must stand in their own penalty area. If you have not placed yours by your last slot, that slot becomes the keeper, unless one of your outfield players already stands in your box: then you may play without a keeper.',
     ],
   },
   {
@@ -67,9 +68,9 @@ export const RULE_SECTIONS: readonly HelpSection[] = [
     id: 'restarts',
     title: 'Goals and restarts',
     bullets: [
-      'After a goal, the team that conceded kicks off from the center spot.',
+      `After a goal, the team that conceded kicks off from the center spot. Kickoffs are capped at ${kickoffCapPct} % power, so they can't reach the goal on their own.`,
       `Over a touchline: throw-in for the team that did not touch it last. Power is capped at ${throwCapPct} % and curve is locked. A goal straight from a throw-in does not count.`,
-      'Over a goal line: if an attacker touched it last, the defending keeper gets a goal kick; if a defender touched it last, the attackers get a corner.',
+      'Over a goal line: if an attacker touched it last, the defending keeper (or, with no keeper, the defender nearest the goal) gets a goal kick; if a defender touched it last, the attackers get a corner.',
       'Offside, fouls and cards do not exist.',
     ],
   },

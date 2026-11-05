@@ -54,9 +54,11 @@ export const HEIGHT_STEP = 0.1;
 
 export const DEFAULT_SLIDERS: Readonly<KickSliders> = Object.freeze({ power: 50, curve: 0, loft: 0 });
 
-/** The power cap under the given restart caps, % (§2.6.3: throw-in 45 %). */
+/** The power cap under the given restart caps, % (§2.6.3: throw-in 45 %; §2.7.1: kickoff 50 %). */
 export function powerCap(caps: KickCaps, c: PhysicsConstants = PHYS): number {
-  return caps.throwIn ? Math.round(c.THROW_POWER_CAP * 100) : SLIDERS.power.max;
+  if (caps.throwIn) return Math.round(c.THROW_POWER_CAP * 100);
+  if (caps.kickoff) return Math.round(c.KICKOFF_POWER_CAP * 100);
+  return SLIDERS.power.max;
 }
 
 /** True when the curve slider is locked (throw-in). */
@@ -326,8 +328,8 @@ export function createKickPanel(): KickPanel {
     }
     sliders.power.root.classList.toggle('capped', capped);
     sliders.curve.root.classList.toggle('locked', curveLocked(caps));
-    capNote.textContent = caps.throwIn ? `Throw-in: power max ${pc}%, curve locked` : '';
-    capNote.hidden = !caps.throwIn;
+    capNote.textContent = caps.throwIn ? `Throw-in: power max ${pc}%, curve locked` : caps.kickoff ? `Kickoff: power max ${pc}%` : '';
+    capNote.hidden = !caps.throwIn && !caps.kickoff;
     el.classList.toggle('disabled', !enabled);
     kickBtn.disabled = !enabled;
   }

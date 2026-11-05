@@ -188,8 +188,8 @@ export function buildFigureParts(gk: boolean, kitHex: number, look: Look = DEFAU
 
   // Arm: hangs down (−y) from the shoulder joint. Outfield rests slightly away
   // from the body; keepers spread (the rest spread is applied by the caller).
-  const upper = gk ? 0.24 : 0.25;
-  const lower = gk ? 0.2 : 0.25;
+  const upper = gk ? 0.32 : 0.25; // M17: longer keeper arms for the wider reach
+  const lower = gk ? 0.28 : 0.25;
   const armR = 0.05 * s;
   const armParts: THREE.BufferGeometry[] = [];
   const up = new THREE.CylinderGeometry(armR * 1.05, armR, upper * s, 8);
@@ -431,7 +431,7 @@ export function createPlayersView(opts: PlayersOptions = {}): PlayersView {
   // Possessor ring: one flat ring that moves to the player on the ball.
   const ringGeos = {
     of: new THREE.RingGeometry(0.62, 0.78, 40).rotateX(-Math.PI / 2),
-    gk: new THREE.RingGeometry(1.0, 1.2, 40).rotateX(-Math.PI / 2),
+    gk: new THREE.RingGeometry(1.35, 1.55, 40).rotateX(-Math.PI / 2),
   };
   const ringMat = new THREE.MeshBasicMaterial({
     color: 0xffd23a,

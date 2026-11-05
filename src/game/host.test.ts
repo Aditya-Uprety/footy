@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRng } from '../shared/rng';
+import { PHYS } from '../sim/constants';
 import { DRAFT_SCHEDULE } from './draft';
 import { defaultYaw, GUARD_GRACE_MS, GUARD_SLIDERS, HostCore, type KickEvent } from './host';
 import { activeSeat, seatOfTeam } from './rules';
@@ -82,7 +83,8 @@ describe('HostCore intent validation (§8.6)', () => {
     expect(core.handle(a, { type: 'kick', turnId: 1, input: { yaw: 0, power: 7, curve: -9, loft: 0 }, auto: true })).toEqual({ ok: true });
     expect(kicks).toHaveLength(1);
     expect(kicks[0]!).toMatchObject({ seat: a, auto: true, guard: false });
-    expect(kicks[0]!.result.input).toMatchObject({ power: 1, curve: -1 });
+    // The opening possession is a kickoff: power is capped (§2.7.1), curve is free.
+    expect(kicks[0]!.result.input).toMatchObject({ power: PHYS.KICKOFF_POWER_CAP, curve: -1 });
     expect(kicks[0]!.next).toBe(core.state);
     expect(states.length).toBe(n);
     // The same turn can't be kicked twice.

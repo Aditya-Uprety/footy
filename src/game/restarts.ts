@@ -59,7 +59,8 @@ export function cornerPossession(pitch: Pitch, team: Team, defending: Team, z: n
 
 /**
  * Goal kick: `team`'s keeper has the ball where they stand. Without a keeper
- * (never in a real match) the team's player closest to its own goal takes it.
+ * (allowed when an outfield player stands in the team's own box, §2.3.3) the
+ * team's player closest to the center of its own goal line takes it.
  */
 export function goalKickPossession(players: GameState['players'], team: Team, pitch: Pitch): Possession {
   const gk = players.find((p) => p.team === team && p.gk);

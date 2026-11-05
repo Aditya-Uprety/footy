@@ -85,12 +85,12 @@ describe('placement model: keeper toggle (M7.3)', () => {
 
   it('forced keeper: the last slot of the team’s last pick locks to keeper', () => {
     const nine: PlayerSpot[] = [];
-    for (const x of [-40, -30, -20]) for (const z of [-20, 0, 20]) nine.push(pl(nine.length + 1, 0, x, z));
+    for (const x of [-34, -24, -14]) for (const z of [-20, 0, 20]) nine.push(pl(nine.length + 1, 0, x, z));
     const m = createPlacementModel(st(10, nine), 0);
     expect(m.gk()).toMatchObject({ forced: true, locked: false, next: false, toggleable: true });
-    m.add(-10, 25); // outfield first
+    m.add(-4, 30); // outfield first
     expect(m.gk()).toMatchObject({ forced: true, locked: true, next: true, toggleable: false });
-    expect(codes(m.check(-10, -25))).toEqual(['gkBox']);
+    expect(codes(m.check(-4, -30))).toEqual(['gkBox']);
     expect(m.add(-48, 10)).toEqual([]);
     expect(m.spots[1]!.gk).toBe(true);
     expect(m.issues()).toEqual([]);
@@ -109,13 +109,26 @@ describe('placement model: keeper toggle (M7.3)', () => {
   });
 
   it('surfaces the guard at Confirm', () => {
-    const tiles: PlayerSpot[] = [];
-    for (const z of [-16, -8, 0, 8, 16]) tiles.push(pl(tiles.length + 1, 1, 40, z));
-    for (const z of [-16, -8, 0, 8]) tiles.push(pl(tiles.length + 1, 1, 48, z));
-    const m = createPlacementModel(st(9, tiles), 1);
-    m.add(48, 16);
-    m.add(-20, 0);
+    // Opponent spacing 7 m: A's outfielders fill B's empty box except two corners.
+    const wide = { ...settings, minOpponentDist: 7 };
+    const sealers: PlayerSpot[] = [];
+    for (const z of [-16, -8, 0, 8, 16]) sealers.push(pl(sealers.length + 1, 0, 40, z));
+    for (const z of [-12, -4, 4, 12]) sealers.push(pl(sealers.length + 1, 0, 48, z));
+    const m = createPlacementModel({ settings: wide, pick: 2, players: sealers }, 0);
+    m.add(48, 20);
+    m.add(48, -20);
     expect(codes(m.issues())).toEqual(['gkGuard']);
+  });
+
+  it('no forced keeper when an outfield teammate already stands in the own box (M17)', () => {
+    const nine: PlayerSpot[] = [];
+    for (const x of [-34, -24, -14]) for (const z of [-20, 0, 20]) nine.push(pl(nine.length + 1, 0, x, z));
+    nine[8] = pl(9, 0, -45, 0);
+    const m = createPlacementModel(st(10, nine), 0);
+    expect(m.gk()).toMatchObject({ forced: false, locked: false, toggleable: true });
+    m.add(-4, 30);
+    expect(m.add(-4, -30)).toEqual([]);
+    expect(m.issues()).toEqual([]);
   });
 
   it('refuses a pick that is not this team’s', () => {

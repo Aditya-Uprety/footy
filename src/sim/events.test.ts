@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { derivePitch } from '../shared/pitch';
 import { DEFAULT_SETTINGS } from '../game/settings';
-import { PHYS } from './constants';
+import { HITBOX, PHYS } from './constants';
 import { kickoffSpot } from './kick';
 import { detectLines, simulateKick } from './simulate';
 import { FRAME_STRIDE, type KickOrigin, type KickResult, type SimEvent, type Team } from './types';
@@ -114,7 +114,7 @@ describe('goal frame (§5.7)', () => {
   });
 
   it('a ball at bar height hits the crossbar and comes back out', () => {
-    const res = shoot({ origin: ghost(50, 2.5, 0), yaw: 0, power: 0.5 });
+    const res = shoot({ origin: ghost(50, 2.52, 0), yaw: 0, power: 0.5 });
     const bars = ofKind(res, 'bar');
     expect(bars.length).toBeGreaterThanOrEqual(1);
     expect(bars[0]!.y).toBeGreaterThan(2.44 - 0.17);
@@ -227,7 +227,7 @@ describe('keepers (§2.5.3)', () => {
     expect(last).toMatchObject({ kind: 'catch', keeperId: 3 });
     expect(last.t).toBe(res.duration);
     expect(ofKind(res, 'player')).toHaveLength(0);
-    if (last.kind === 'catch') expect(last.x).toBeCloseTo(45 - 0.9 - r, 1);
+    if (last.kind === 'catch') expect(last.x).toBeCloseTo(45 - HITBOX.GK.R - r, 1);
   });
 
   it('the keeper’s wider reach catches a lob that would clear an outfield player', () => {

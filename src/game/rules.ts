@@ -156,9 +156,11 @@ export function applyPick(s: GameState, team: Team, spots: readonly SpotInput[])
   return bump(s, { players, pick: s.pick + 1 });
 }
 
-/** Restart caps for a possession: throw-ins cap power and lock curve (§2.6.3). */
+/** Restart caps for a possession: throw-ins cap power and lock curve (§2.6.3); kickoffs cap power (§2.7.1). */
 export function kickCaps(p: Possession): KickCaps {
-  return p.restart === 'throwin' ? { throwIn: true } : {};
+  if (p.restart === 'throwin') return { throwIn: true };
+  if (p.restart === 'kickoff') return { kickoff: true };
+  return {};
 }
 
 /** The physics origin of the current kicker. */

@@ -14,6 +14,8 @@ export const THROW_X_MARGIN = 1;
 export interface KickCaps {
   /** Throw-in: power ≤ THROW_POWER_CAP, curve locked at 0 (§2.6.3). */
   throwIn?: boolean;
+  /** Kickoff: power ≤ KICKOFF_POWER_CAP; curve and loft free (M17). */
+  kickoff?: boolean;
 }
 
 function finiteOr0(v: number): number {
@@ -36,6 +38,7 @@ export function capKickInput(input: KickInput, caps: KickCaps = {}, c: PhysicsCo
     power = Math.min(power, c.THROW_POWER_CAP);
     curve = 0;
   }
+  if (caps.kickoff) power = Math.min(power, c.KICKOFF_POWER_CAP);
   return { yaw: finiteOr0(input.yaw), power, curve, loft };
 }
 

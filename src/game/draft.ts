@@ -36,14 +36,31 @@ export function teamHasGk(players: readonly PlayerSpot[], team: Team): boolean {
   return players.some((p) => p.team === team && p.gk);
 }
 
+/** True when an outfield player of `team` already stands in its own penalty area (§2.3.3, M17). */
+export function teamHasBoxPlayer(pitch: Pitch, players: readonly PlayerSpot[], team: Team): boolean {
+  const box = pitch.ends[team].penaltyArea;
+  return players.some((p) => p.team === team && !p.gk && rectContains(box, p.x, p.z));
+}
+
 /**
- * §2.3.3: when this is the team's last pick and it has no keeper yet, the
- * pick must include exactly one keeper (its last slot is forced to be the GK).
+ * Does `team` still need a keeper? Yes until it has one, unless one of its
+ * outfield players already stands in its own penalty area: then the keeper
+ * is optional (§2.3.3, M17).
  */
-export function gkForced(state: Pick<GameState, 'pick' | 'players'>, team: Team): boolean {
+export function gkNeeded(state: Pick<GameState, 'settings' | 'players'>, team: Team): boolean {
+  if (teamHasGk(state.players, team)) return false;
+  return !teamHasBoxPlayer(derivePitch(state.settings), state.players, team);
+}
+
+/**
+ * §2.3.3: when this is the team's last pick and it still needs a keeper, the
+ * pick must include exactly one keeper (its last slot is forced to be the GK).
+ * Not forced when an outfield teammate already stands in the team's own box.
+ */
+export function gkForced(state: Pick<GameState, 'settings' | 'pick' | 'players'>, team: Team): boolean {
   const info = pickInfo(state.pick);
   if (!info || info.team !== team) return false;
-  return !teamHasGk(state.players, team) && slotsLeftFrom(state.pick, team) === info.count;
+  return slotsLeftFrom(state.pick, team) === info.count && gkNeeded(state, team);
 }
 
 type Spacing = Pick<Settings, 'minTeammateDist' | 'minOpponentDist'>;
@@ -186,12 +203,13 @@ export function validateSpots(state: Pick<GameState, 'settings' | 'pick' | 'play
     out.push({ spot: -1, code: 'gkForced', message: 'Your last player must be the keeper' });
   }
 
-  // §2.3.4e: after this pick, every team without a keeper must still have a legal keeper spot.
+  // §2.3.4e: after this pick, every team that still needs a keeper must still have a legal keeper spot.
+  // A team with an outfield player in its own box no longer needs one (M17).
   if (out.length === 0) {
     const after: Placed[] = [...standing, ...spots.map((s) => ({ team, x: s.x, z: s.z }))];
+    const afterPlayers: PlayerSpot[] = [...state.players, ...spotsToPlayers(state.players, team, spots)];
     for (const t of [team, otherTeam(team)] as Team[]) {
-      const hasGk = t === team ? hadGk || newGks > 0 : teamHasGk(state.players, t);
-      if (hasGk) continue;
+      if (!gkNeeded({ settings: state.settings, players: afterPlayers }, t)) continue;
       if (!gkSpotExists(pitch, spacing, after, t)) {
         const whose = t === team ? 'your' : "the other team's";
         out.push({ spot: -1, code: 'gkGuard', message: `This would leave ${whose} keeper no legal spot in the box` });

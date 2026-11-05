@@ -102,7 +102,8 @@ export function createPracticeView(stage: Stage, pitch: Pitch, opts: PracticeOpt
 
   function begin(t: PracticeTurn, instant = false): void {
     turn = t;
-    flow.startTurn({ origin: t.origin, yaw: t.yaw }, { instant });
+    // Practice ghost turns are always center kickoffs: same power cap as a match (§2.7.1).
+    flow.startTurn({ origin: t.origin, yaw: t.yaw, caps: t.origin.kind === 'ghost' ? { kickoff: true } : {} }, { instant });
     renderHud();
   }
 

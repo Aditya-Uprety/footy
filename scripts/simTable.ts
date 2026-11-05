@@ -59,9 +59,9 @@ function both(a: { text: string; ok: boolean }, b: { text: string; ok: boolean }
 }
 
 const TARGETS: Target[] = [
-  { label: 'P25 L0 (pass)', plan: '29 m', run: () => kick(25, 0), value: (_, s) => range('total', s.total, 25, 34) },
-  { label: 'P50 L0', plan: '56 m', run: () => kick(50, 0), value: (_, s) => range('total', s.total, 48, 63) },
-  { label: 'P100 L0', plan: '94 m', run: () => kick(100, 0), value: (_, s) => range('total', s.total, 85, 103) },
+  { label: 'P25 L0 (pass)', plan: '17 m (M17)', run: () => kick(25, 0), value: (_, s) => range('total', s.total, 15, 20) },
+  { label: 'P50 L0', plan: '37 m (M17)', run: () => kick(50, 0), value: (_, s) => range('total', s.total, 32, 41) },
+  { label: 'P100 L0', plan: '70 m (M17)', run: () => kick(100, 0), value: (_, s) => range('total', s.total, 62, 77) },
   {
     label: 'P100 L15',
     plan: 'carry 36, apex 3.0',

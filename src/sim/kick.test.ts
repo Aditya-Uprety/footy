@@ -20,8 +20,8 @@ const center: KickOrigin = { kind: 'ghost', ...kickoffSpot() };
 describe('kick model (PLAN §5.6)', () => {
   it('maps power to V_MIN..V_MAX', () => {
     expect(kickSpeed(0)).toBe(3);
-    expect(kickSpeed(1)).toBe(32);
-    expect(kickSpeed(0.25)).toBeCloseTo(10.25, 12);
+    expect(kickSpeed(1)).toBe(30);
+    expect(kickSpeed(0.25)).toBeCloseTo(9.75, 12);
   });
 
   it('clamps sliders, zeroes non-finite numbers and applies throw-in caps', () => {
@@ -38,6 +38,9 @@ describe('kick model (PLAN §5.6)', () => {
       curve: 0,
       loft: 0.3,
     });
+    // Kickoff (M17): power capped at KICKOFF_POWER_CAP, curve and loft free.
+    expect(capKickInput({ yaw: 0, power: 0.9, curve: 0.8, loft: 0.3 }, { kickoff: true })).toEqual({ yaw: 0, power: 0.5, curve: 0.8, loft: 0.3 });
+    expect(capKickInput({ yaw: 0, power: 0.3, curve: 0, loft: 0 }, { kickoff: true }).power).toBe(0.3);
     // Below the cap, power is untouched.
     expect(capKickInput({ yaw: 0, power: 0.2, curve: 0, loft: 0 }, { throwIn: true }).power).toBe(0.2);
   });
@@ -60,8 +63,8 @@ describe('kick model (PLAN §5.6)', () => {
     const b = initialBallState({ yaw: Math.PI / 2, power: 1, curve: 0.5, loft: 1 }, center);
     const a = PHYS.LOFT_MAX;
     expect(b.v.x).toBeCloseTo(0, 12);
-    expect(b.v.y).toBeCloseTo(32 * Math.sin(a), 12);
-    expect(b.v.z).toBeCloseTo(32 * Math.cos(a), 12);
+    expect(b.v.y).toBeCloseTo(30 * Math.sin(a), 12);
+    expect(b.v.z).toBeCloseTo(30 * Math.cos(a), 12);
     expect(b.w).toEqual({ x: 0, y: -25, z: 0 });
     expect(b.rolling).toBe(false);
   });

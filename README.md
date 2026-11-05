@@ -8,10 +8,10 @@ Turn-based 3D football in the browser (Three.js + Vite + TypeScript). Two player
 
 ## How to play
 
-1. **Draft.** A coin toss decides who picks the role: *Team A* (places first and takes the opening kickoff) or *Team B* (places the very last player). Each team places 11 players in a snake draft (A1, B2, A2, B2, …, B1). Spots must be ≥ 8 m from teammates, ≥ 4 m from opponents, outside the center circle and 1 m inside the lines. Exactly one keeper per team, inside its own penalty area. Red spots show the reason.
+1. **Draft.** A coin toss decides who picks the role: *Team A* (places first and takes the opening kickoff) or *Team B* (places the very last player). Each team places 11 players in a snake draft (A1, B2, A2, B2, …, B1). Spots must be ≥ 8 m from teammates, ≥ 4 m from opponents, outside the center circle and 1 m inside the lines. At most one keeper per team, inside its own penalty area; it is forced on the last slot unless an outfield teammate already stands in the box. Red spots show the reason.
 2. **Kick.** Whoever has the ball turns on the spot (drag, or ← / →), sets **Power**, **Curve** and **Loft** on the side bar and kicks (button or Space). There is nothing to show where the ball will go: use your eye, the zoom (wheel), the camera height, the minimap and the hold-Tab overhead map (positions only).
-3. **Shot timer.** 20 s; at 0 the ball is auto-kicked as you left it.
-4. **Ball in play.** The ball bounces off players; keepers catch it. When it stops, the closest player (either team) gets it. Goals, throw-ins, corners and goal kicks follow football rules, simplified. 40 kicks per match, half-time after 20; a draw is possible.
+3. **Shot timer.** 30 s; at 0 the ball is auto-kicked as you left it.
+4. **Ball in play.** The ball bounces off players; keepers catch it. Kickoffs are capped at 50 % power. When it stops, the closest player (either team) gets it. Goals, throw-ins, corners and goal kicks follow football rules, simplified. 40 kicks per match, half-time after 20; a draw is possible.
 
 Keys: ← / → turn (Shift = fine) · ↑ / ↓ look · +/− zoom · PgUp / PgDn camera height · W·S power · A·D curve · Q·E loft · Space kick · hold Tab overhead map · hold F fast-forward · C camera · H help.
 

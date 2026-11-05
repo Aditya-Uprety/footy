@@ -66,6 +66,8 @@ export interface PhysicsConstants {
   LOFT_MAX: number;
   /** Throw-in power cap (fraction) and release height, m. */
   THROW_POWER_CAP: number;
+  /** Kickoff power cap (fraction): a capped kickoff can't reach the goal (M17). */
+  KICKOFF_POWER_CAP: number;
   THROW_HEIGHT: number;
   /** Gap between the kicker's hitbox and the ball, m. */
   KICK_GAP: number;
@@ -88,7 +90,7 @@ export interface HitboxShape {
 
 export const HITBOX: Readonly<{ OUTFIELD: HitboxShape; GK: HitboxShape }> = Object.freeze({
   OUTFIELD: Object.freeze({ R: 0.4, HC: 1.45 }), // top at 1.85 m
-  GK: Object.freeze({ R: 0.9, HC: 1.4 }), // top at 2.30 m, arms spread
+  GK: Object.freeze({ R: 1.25, HC: 1.05 }), // top at 2.30 m, arms spread (M17: was R 0.9, HC 1.4)
 });
 
 /** Goal frame: posts and crossbar are capsules of this radius, m (0.12 m diameter). */
@@ -126,7 +128,7 @@ export const PHYS: Readonly<PhysicsConstants> = Object.freeze(
     BOUNCE_KEEP_MIN: 0.6,
     SPIN_KEEP_GROUND: 0.8,
     V_SETTLE: 0.6,
-    MU_ROLL: 0.12,
+    MU_ROLL: 0.22, // M17: was 0.12 (rolls were too long)
     V_STOP: 0.05,
     T_MAX: 30,
     E_PLAYER: 0.45,
@@ -138,9 +140,10 @@ export const PHYS: Readonly<PhysicsConstants> = Object.freeze(
     E_NET: 0.1,
     NET_TANGENT_KEEP: 0.5,
     V_MIN: 3,
-    V_MAX: 32,
+    V_MAX: 30, // M17: was 32
     LOFT_MAX: 55 * DEG,
     THROW_POWER_CAP: 0.45,
+    KICKOFF_POWER_CAP: 0.5,
     THROW_HEIGHT: 1.8,
     KICK_GAP: 0.02,
     GRACE_DIST: 0.25,

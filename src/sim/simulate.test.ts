@@ -31,7 +31,7 @@ describe('simulateKick: loop, frames, events (PLAN §5.9)', () => {
   });
 
   it('emits kick first, ground contacts in order, stop last', () => {
-    expect(r.events[0]).toEqual({ kind: 'kick', t: 0, speed: expect.closeTo(3 + 0.8 * 29, 9) });
+    expect(r.events[0]).toEqual({ kind: 'kick', t: 0, speed: expect.closeTo(PHYS.V_MIN + 0.8 * (PHYS.V_MAX - PHYS.V_MIN), 9) });
     const last = r.events[r.events.length - 1]!;
     expect(last.kind).toBe('stop');
     expect(last.t).toBe(r.duration);
